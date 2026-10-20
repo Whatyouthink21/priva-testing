@@ -6,6 +6,7 @@ import { useList } from "../context/ListContext";
 
 export default function HeroCarousel({ items = [] }) {
   const [index, setIndex] = useState(0);
+  const [zoom, setZoom] = useState(false);
   const navigate = useNavigate();
   const { toggleList, isInList } = useList();
 
@@ -14,6 +15,12 @@ export default function HeroCarousel({ items = [] }) {
     const id = setInterval(()=> setIndex(i=> (i+1)%items.length), 6000);
     return ()=> clearInterval(id);
   }, [items.length]);
+
+  useEffect(()=> {
+    setZoom(false);
+    const t = setTimeout(()=> setZoom(true), 50);
+    return ()=> clearTimeout(t);
+  }, [index]);
 
   if(!items.length) {
     return <div className="h-[60vh] md:h-[72vh] bg-[#111] animate-pulse" />
@@ -25,27 +32,35 @@ export default function HeroCarousel({ items = [] }) {
   const year = yearFromDate(item.release_date || item.first_air_date);
   const rating = item.vote_average ? item.vote_average.toFixed(1) : null;
   const mediaType = item.media_type || (item.title ? "movie" : "tv");
-  const genreText = "Science Fiction"; // fallback; TMDB genres need mapping
 
-  // Use actual genres if available
-  const genres = item.genre_ids ? item.genre_ids.slice(0,2).map(id=> genreMap[id]||null).filter(Boolean).join(" • ") : null;
+  const genreMap = {
+    28:"Action",12:"Adventure",16:"Animation",35:"Comedy",80:"Crime",99:"Documentary",18:"Drama",10751:"Family",14:"Fantasy",36:"History",27:"Horror",10402:"Music",9648:"Mystery",10749:"Romance",878:"Science Fiction",10770:"TV Movie",53:"Thriller",10752:"War",37:"Western",
+    10759:"Action & Adventure",10762:"Kids",10763:"News",10764:"Reality",10765:"Sci-Fi & Fantasy",10766:"Soap",10767:"Talk",10768:"War & Politics"
+  }
+  const genreText = item.genre_ids ? item.genre_ids.slice(0,2).map(id=> genreMap[id]).filter(Boolean).join(" • ") : (item.genres?.[0]?.name || "Drama");
 
   return (
-    <div className="relative w-full h-[58vh] md:h-[78vh] min-h-[420px] overflow-hidden bg-black">
-      {/* Backdrop image */}
-      <div className="absolute inset-0">
-        <img src={backdrop} alt={title} className="w-full h-full object-cover object-top" />
+    <div className="relative w-full h-[62vh] md:h-[84vh] min-h-[460px] overflow-hidden bg-black">
+      {/* Backdrop with zoom effect */}
+      <div className="absolute inset-0 overflow-hidden">
+        <img
+          key={item.id}
+          src={backdrop}
+          alt={title}
+          className={`w-full h-full object-cover object-top transition-transform duration-[6000ms] ease-out ${zoom ? "scale-[1.08]" : "scale-100"}`}
+        />
         <div className="absolute inset-0 bg-gradient-to-t from-[#080808] via-[#080808]/60 to-transparent" />
         <div className="absolute inset-0 bg-gradient-to-r from-[#080808]/90 via-[#080808]/40 to-transparent md:via-[#080808]/30" />
-        <div className="absolute bottom-0 left-0 right-0 h-32 hero-gradient" />
+        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#080808] to-transparent" />
+        <div className="absolute inset-0 bg-black/10" />
       </div>
 
       {/* Content */}
-      <div className="relative h-full max-w-[1600px] mx-auto px-4 md:px-10 lg:px-12 flex flex-col justify-end md:justify-center pb-10 md:pb-0 md:pt-10">
+      <div className="relative h-full max-w-[1600px] mx-auto px-4 md:px-10 lg:px-12 flex flex-col justify-end md:justify-center pb-10 md:pb-0 md:pt-16">
         <div className="max-w-[620px]">
-          {/* Big title like HOPE - replicate style */}
-          <h1 className="text-[42px] md:text-[78px] font-black tracking-[-0.04em] leading-none mb-3" style={{ textShadow: "0 4px 24px rgba(0,0,0,0.6)" }}>
-            <span className="bg-gradient-to-b from-white to-white/90 bg-clip-text text-transparent drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]" style={{ WebkitTextStroke: "1px rgba(255,255,255,0.15)" }}>
+          {/* Animated title */}
+          <h1 className="text-[42px] md:text-[64px] font-black tracking-[-0.04em] leading-none mb-3" style={{ textShadow: "0 4px 24px rgba(0,0,0,0.6)" }}>
+            <span className="bg-gradient-to-b from-white to-white/90 bg-clip-text text-transparent drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
               {title?.toUpperCase()}
             </span>
           </h1>
@@ -55,10 +70,10 @@ export default function HeroCarousel({ items = [] }) {
             {rating && <span className="w-1 h-1 bg-white/40 rounded-full" />}
             {year && <span className="flex items-center gap-1"><Calendar size={13} className="opacity-70" /> {year}</span>}
             <span className="w-1 h-1 bg-white/40 rounded-full" />
-            <span className="flex items-center gap-1"><Rocket size={13} className="opacity-70" /> {item.genreText || genres || "Drama"}</span>
+            <span className="flex items-center gap-1"><Rocket size={13} className="opacity-70" /> {genreText}</span>
           </div>
 
-          <p className="text-[13px] md:text-[14px] leading-relaxed text-white/80 line-clamp-3 md:line-clamp-3 max-w-[520px] mb-6">
+          <p className="text-[13px] md:text-[14px] leading-relaxed text-white/80 line-clamp-3 max-w-[520px] mb-6">
             {item.overview || "Discover the most anticipated stories — streaming now on PRIVA."}
           </p>
 
@@ -79,13 +94,13 @@ export default function HeroCarousel({ items = [] }) {
         </div>
       </div>
 
-      {/* Carousel dots & arrows */}
+      {/* Controls */}
       <div className="absolute bottom-6 right-4 md:right-10 flex items-center gap-3">
         <div className="hidden md:flex items-center gap-2">
           <button onClick={()=> setIndex(i=> (i-1+items.length)%items.length)} className="w-8 h-8 rounded-full bg-white/10 backdrop-blur flex items-center justify-center hover:bg-white/15"><ChevronLeft size={16}/></button>
           <button onClick={()=> setIndex(i=> (i+1)%items.length)} className="w-8 h-8 rounded-full bg-white/10 backdrop-blur flex items-center justify-center hover:bg-white/15"><ChevronRight size={16}/></button>
         </div>
-        <div className="flex items-center gap-1.5 bg-black/30 backdrop-blur px-2 py-1 rounded-full">
+        <div className="flex items-center gap-1.5 bg-black/30 backdrop-blur px-2 py-1 rounded-full border border-white/10">
           {items.slice(0,8).map((_,i)=> (
             <button key={i} onClick={()=> setIndex(i)} className={`transition-all rounded-full ${i===index ? "w-6 h-1.5 bg-white" : "w-1.5 h-1.5 bg-white/50 hover:bg-white/80"}`} />
           ))}
@@ -93,9 +108,4 @@ export default function HeroCarousel({ items = [] }) {
       </div>
     </div>
   )
-}
-
-const genreMap = {
-  28:"Action",12:"Adventure",16:"Animation",35:"Comedy",80:"Crime",99:"Documentary",18:"Drama",10751:"Family",14:"Fantasy",36:"History",27:"Horror",10402:"Music",9648:"Mystery",10749:"Romance",878:"Science Fiction",10770:"TV Movie",53:"Thriller",10752:"War",37:"Western",
-  10759:"Action & Adventure",10762:"Kids",10763:"News",10764:"Reality",10765:"Sci-Fi & Fantasy",10766:"Soap",10767:"Talk",10768:"War & Politics"
 }

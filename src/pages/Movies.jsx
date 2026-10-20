@@ -28,20 +28,21 @@ export default function Movies() {
       setComedy((com.results||[]).map(r=> ({...r, media_type:"movie"})));
     }
     load();
+    window.scrollTo(0,0);
   },[]);
 
   return (
-    <div className="min-h-screen bg-[#080808] pt-4 pb-12">
-      <div className="max-w-[1600px] mx-auto px-4 md:px-8 mb-6">
+    <div className="min-h-screen bg-[#080808] pt-[64px] pb-12">
+      <div className="max-w-[1600px] mx-auto px-4 md:px-8 py-6">
         <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Movies</h1>
         <p className="text-sm text-white/50 mt-1">Discover thousands of movies streaming on PRIVA</p>
       </div>
-      <MediaRow title="Popular Movies" items={popular} />
-      <MediaRow title="Now Playing" items={nowPlaying} />
-      <MediaRow title="Top Rated" items={topRated} />
-      <MediaRow title="Upcoming" items={upcoming} />
-      <MediaRow title="Action" items={action} />
-      <MediaRow title="Comedy Hits" items={comedy} />
+      <MediaRow title="Popular Movies" items={popular} variant="portrait" />
+      <MediaRow title="Now Playing" items={nowPlaying} variant="portrait" />
+      <MediaRow title="Top Rated" items={topRated} variant="portrait" />
+      <MediaRow title="Upcoming" items={upcoming} variant="portrait" />
+      <MediaRow title="Action" items={action} variant="portrait" />
+      <MediaRow title="Comedy Hits" items={comedy} variant="portrait" />
     </div>
   )
 }

@@ -2,7 +2,7 @@ import { useRef } from "react";
 import { ChevronLeft, ChevronRight, Pencil } from "lucide-react";
 import MediaCard from "./MediaCard";
 
-export default function MediaRow({ title, items=[], actionIcon, progressMap, onTitleClick, emptyText="No items" }) {
+export default function MediaRow({ title, items=[], actionIcon, progressMap, onTitleClick, emptyText="No items", variant="portrait" }) {
   const scrollerRef = useRef(null);
   const scroll = (dir) => {
     const el = scrollerRef.current;
@@ -22,6 +22,8 @@ export default function MediaRow({ title, items=[], actionIcon, progressMap, onT
     )
   }
 
+  const isLandscape = variant === "landscape";
+
   return (
     <section className="py-5 md:py-6">
       <div className="flex items-center justify-between mb-3 px-4 md:px-8 max-w-[1600px] mx-auto">
@@ -39,13 +41,23 @@ export default function MediaRow({ title, items=[], actionIcon, progressMap, onT
       </div>
 
       <div className="relative max-w-[1600px] mx-auto">
-        <div ref={scrollerRef} className="flex gap-3 md:gap-4 overflow-x-auto scrollbar-hide scroll-smooth px-4 md:px-8 pb-2 snap-x snap-mandatory">
-          {items.map(item=> (
-            <div key={`${item.media_type||item.title?'m':'t'}-${item.id}`} className="snap-start">
-              <MediaCard item={item} progress={progressMap?.[item.id]} />
-            </div>
-          ))}
-        </div>
+        {isLandscape ? (
+          <div ref={scrollerRef} className="flex gap-3 md:gap-4 overflow-x-auto scrollbar-hide scroll-smooth px-4 md:px-8 pb-2 snap-x snap-mandatory">
+            {items.map(item=> (
+              <div key={`${item.media_type || (item.title ? 'movie':'tv')}-${item.id}`} className="snap-start shrink-0">
+                <MediaCard item={item} progress={progressMap?.[item.id]} variant="landscape" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div ref={scrollerRef} className="flex gap-3 md:gap-4 overflow-x-auto scrollbar-hide scroll-smooth px-4 md:px-8 pb-2 snap-x snap-mandatory">
+            {items.map(item=> (
+              <div key={`${item.media_type || (item.title ? 'movie':'tv')}-${item.id}`} className="snap-start shrink-0 w-[140px] md:w-[165px] lg:w-[180px]">
+                <MediaCard item={item} progress={progressMap?.[item.id]} variant="portrait" />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   )

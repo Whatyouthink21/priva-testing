@@ -5,7 +5,7 @@ import { img } from "../lib/tmdb";
 import { useList } from "../context/ListContext";
 import { useWatchHistory } from "../context/WatchHistoryContext";
 
-export default function MediaCard({ item, progress, showMeta=true, size="default", onHover }) {
+export default function MediaCard({ item, progress, showMeta=true, variant="landscape", onHover }) {
   const navigate = useNavigate();
   const { isInList, toggleList } = useList();
   const { getProgress } = useWatchHistory();
@@ -13,11 +13,16 @@ export default function MediaCard({ item, progress, showMeta=true, size="default
 
   const title = item.title || item.name;
   const mediaType = item.media_type || (item.title ? "movie" : "tv");
-  const poster = img.poster(item.poster_path, "w500") || img.backdrop(item.backdrop_path, "w780");
   const year = (item.release_date || item.first_air_date || "").slice(0,4);
   const rating = item.vote_average ? item.vote_average.toFixed(1) : null;
 
-  // progress: could be passed directly or from storage
+  // Choose image based on variant
+  const isPortrait = variant === "portrait";
+  const image = isPortrait
+    ? (img.poster(item.poster_path, "w500") || img.backdrop(item.backdrop_path, "w780") || null)
+    : (img.backdrop(item.backdrop_path, "w500") || img.poster(item.poster_path, "w500") || null);
+
+  // progress
   const progKey = `${mediaType}:${item.id}`;
   const storedProg = getProgress(progKey);
   const pct = progress?.pct ?? storedProg?.pct ?? null;
@@ -37,22 +42,81 @@ export default function MediaCard({ item, progress, showMeta=true, size="default
     toggleList({ id: item.id, media_type: mediaType, title, poster_path: item.poster_path, backdrop_path: item.backdrop_path, vote_average: item.vote_average, release_date: item.release_date, first_air_date: item.first_air_date });
   };
 
+  if (isPortrait) {
+    return (
+      <div
+        className="group relative flex-shrink-0 cursor-pointer w-full"
+        onMouseEnter={()=> { setHovered(true); onHover?.(item); }}
+        onMouseLeave={()=> setHovered(false)}
+        onClick={handleClick}
+      >
+        <div className="relative aspect-[2/3] w-full rounded-xl overflow-hidden bg-[#141414] border border-white/[0.06]">
+          {image ? (
+            <img src={image} alt={title} className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" loading="lazy" />
+          ) : (
+            <div className="w-full h-full bg-[#1a1a1e] flex items-center justify-center text-white/30 text-xs p-4 text-center">No Image</div>
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/5 to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />
+
+          {/* Play button centered on hover */}
+          <div className={`absolute inset-0 flex items-center justify-center transition-all duration-300 ${hovered ? "opacity-100" : "opacity-0"}`}>
+            <div className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center shadow-lg">
+              <Play size={16} className="fill-black ml-0.5" />
+            </div>
+          </div>
+
+          {/* Top right add button */}
+          <div className={`absolute top-2 right-2 flex gap-1 transition-opacity duration-300 ${hovered ? "opacity-100" : "opacity-0"}`}>
+            <button onClick={handlePlus} className="w-7 h-7 rounded-full bg-black/60 backdrop-blur flex items-center justify-center hover:bg-black/80 border border-white/10">
+              {isInList(item.id, mediaType) ? <Check size={12} className="text-white" /> : <Plus size={12} className="text-white" />}
+            </button>
+          </div>
+
+          {/* Year/rating badge */}
+          <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded-md bg-black/60 backdrop-blur text-[10px] font-medium border border-white/10">
+            {year || rating ? `${year || ''}${year && rating ? ' • ' : ''}${rating ? `${rating}` : ''}` : mediaType.toUpperCase()}
+          </div>
+
+          {/* Progress bar */}
+          {pct !== null && (
+            <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-white/20">
+              <div className="h-full bg-white" style={{ width: `${pct}%` }} />
+            </div>
+          )}
+        </div>
+
+        {showMeta && (
+          <div className="mt-2 px-1">
+            <div className="text-[13px] font-medium leading-tight line-clamp-1 text-white">{title}</div>
+            <div className="text-[11px] text-white/50 flex items-center gap-1 mt-0.5">
+              {year && <span>{year}</span>}
+              {year && rating && <span className="w-1 h-1 bg-white/30 rounded-full" />}
+              {rating && <span className="flex items-center gap-0.5">{rating} <span className="text-white/30">/10</span></span>}
+              {timeLeft && <span className="flex items-center gap-1"><Clock size={10} /> {timeLeft}</span>}
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // Landscape variant (Continue Watching - 16:9)
   return (
     <div
-      className={`group relative flex-shrink-0 cursor-pointer ${size==="large" ? "w-[260px] md:w-[300px]" : "w-[160px] md:w-[190px] lg:w-[210px]"}`}
+      className="group relative flex-shrink-0 cursor-pointer w-[260px] md:w-[290px] lg:w-[310px]"
       onMouseEnter={()=> { setHovered(true); onHover?.(item); }}
       onMouseLeave={()=> setHovered(false)}
       onClick={handleClick}
     >
-      <div className="relative aspect-[16/9] md:aspect-[16/9] rounded-xl overflow-hidden bg-[#141414] border border-white/[0.06]">
-        {poster ? (
-          <img src={poster} alt={title} className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" loading="lazy" />
+      <div className="relative aspect-[16/9] rounded-xl overflow-hidden bg-[#141414] border border-white/[0.06]">
+        {image ? (
+          <img src={image} alt={title} className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" loading="lazy" />
         ) : (
           <div className="w-full h-full bg-[#1a1a1e] flex items-center justify-center text-white/30 text-xs">No Image</div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />
 
-        {/* Hover overlay like screenshot 3 */}
+        {/* Hover overlay */}
         <div className={`absolute inset-0 p-2 flex flex-col justify-end transition-all duration-300 ${hovered ? "opacity-100" : "opacity-0 md:opacity-0"}`}>
           <div className="bg-[#0f0f0f]/95 backdrop-blur rounded-xl p-2 border border-white/10">
             <div className="flex items-center gap-2">
@@ -78,12 +142,10 @@ export default function MediaCard({ item, progress, showMeta=true, size="default
           </div>
         </div>
 
-        {/* Mobile play badge */}
         <div className="md:hidden absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 backdrop-blur flex items-center justify-center">
           <Play size={12} className="fill-white text-white ml-0.5" />
         </div>
 
-        {/* Progress bar at bottom (always visible if progress) */}
         {pct !== null && (
           <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-white/20">
             <div className="h-full bg-white" style={{ width: `${pct}%` }} />
@@ -95,17 +157,11 @@ export default function MediaCard({ item, progress, showMeta=true, size="default
         <div className="mt-2 px-1">
           <div className="text-[13px] font-medium leading-tight line-clamp-1 text-white">{title}</div>
           <div className="text-[11px] text-white/50 flex items-center gap-1 mt-0.5">
-            {mediaType==="tv" && item.number_of_seasons ? (
-              <span>S1:E1</span>
-            ) : (
-              <>
-                {timeLeft ? (
-                  <span className="flex items-center gap-1"><Clock size={10} /> {timeLeft} left</span>
-                ) : year ? (
-                  <span>{year} {rating && `• ${rating}/10`}</span>
-                ) : rating ? <span>{rating}/10</span> : <span className="opacity-60">—</span>}
-              </>
-            )}
+            {timeLeft ? (
+              <span className="flex items-center gap-1"><Clock size={10} /> {timeLeft} left</span>
+            ) : year ? (
+              <span>{year} {rating && `• ${rating}/10`}</span>
+            ) : rating ? <span>{rating}/10</span> : <span className="opacity-60">—</span>}
           </div>
         </div>
       )}

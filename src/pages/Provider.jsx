@@ -11,7 +11,7 @@ const providerMeta = {
   "350": { name: "Apple TV+", color: "#000" },
   "15": { name: "Hulu", color: "#1CE783" },
   "531": { name: "Paramount Plus", color: "#0064FF" },
-  "1899": { name: "HBO Max", color: "#000" },
+  "1899": { name: "Max", color: "#000" },
 };
 
 export default function ProviderPage() {
@@ -40,17 +40,13 @@ export default function ProviderPage() {
   }, [id]);
 
   const meta = providerMeta[id] || { name, color: "#dcff00" };
-  // For visual match screenshot 4: green swirly background fallback
-  // We will use a CSS mesh gradient
 
   return (
     <div className="min-h-screen bg-[#080808]">
-      {/* Header with provider */}
-      <div className="relative overflow-hidden" style={{ background: "linear-gradient(180deg, #0a1a0a 0%, #0d2b0d 40%, #080808 100%)" }}>
-        <div className="absolute inset-0 opacity-40" style={{ background: `radial-gradient(600px 400px at 20% 0%, ${meta.color}22, transparent 60%), radial-gradient(800px 600px at 90% 10%, #00ff88 18, transparent 60%)` }} />
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10" />
-        {/* swirl SVG approximation */}
-        <div className="absolute inset-0 opacity-20" style={{ background: "radial-gradient(ellipse 1200px 600px at 50% -20%, rgba(220,255,0,0.25), transparent 70%)" }} />
+      {/* Header */}
+      <div className="relative overflow-hidden pt-[64px]" style={{ background: "linear-gradient(180deg, #0a1a0a 0%, #0d2b0d 30%, #080808 100%)" }}>
+        <div className="absolute inset-0 opacity-30" style={{ background: `radial-gradient(600px 400px at 20% 0%, ${meta.color}22, transparent 60%), radial-gradient(800px 600px at 90% 10%, #00ff88 14, transparent 60%)` }} />
+        <div className="absolute inset-0 opacity-20" style={{ background: "radial-gradient(ellipse 1200px 600px at 50% -20%, rgba(220,255,0,0.18), transparent 70%)" }} />
 
         <div className="relative max-w-[1600px] mx-auto px-4 md:px-8 pt-6 pb-8">
           <Link to="/" className="inline-flex items-center gap-2 text-sm text-white/70 hover:text-white mb-6">
@@ -73,26 +69,20 @@ export default function ProviderPage() {
 
       <div className="max-w-[1600px] mx-auto px-4 md:px-8 py-8">
         {loading ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
             {Array.from({length:12}).map((_,i)=> <div key={i} className="aspect-[2/3] bg-[#141414] rounded-xl shimmer" />)}
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-6 gap-4 md:gap-5">
-            {(tab==="movies" ? movies : series).map(item=> (
-              <div key={item.id} className="flex flex-col">
-                <div className="aspect-[2/3] w-full">
-                  <MediaCard item={item} size="large" showMeta={false} />
-                </div>
-                <div className="mt-2 px-1">
-                  <div className="text-[13px] font-medium line-clamp-1">{item.title || item.name}</div>
-                  <div className="text-xs text-white/40">{(item.release_date||item.first_air_date||"").slice(0,4)}</div>
-                </div>
-              </div>
-            ))}
+          <>
+            <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-6 gap-3 md:gap-5">
+              {(tab==="movies" ? movies : series).map(item=> (
+                <MediaCard key={item.id} item={item} variant="portrait" />
+              ))}
+            </div>
             {(tab==="movies" ? movies : series).length===0 && (
-              <div className="col-span-full py-20 text-center text-white/50">No titles found for this provider in US region. Try another provider.</div>
+              <div className="py-20 text-center text-white/50">No titles found for this provider in US region. Try another provider.</div>
             )}
-          </div>
+          </>
         )}
       </div>
     </div>
