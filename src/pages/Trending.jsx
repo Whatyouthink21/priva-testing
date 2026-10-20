@@ -69,7 +69,7 @@ export default function Trending() {
       </header>
 
       <div
-        className="sticky top-[70px] z-30 -mx-4 mb-6 flex flex-wrap items-center gap-3 border-y border-white/[0.06] bg-ink-950/85 px-4 py-3 backdrop-blur-xl sm:-mx-6 sm:px-6"
+        className="mb-6 flex flex-wrap items-center gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.025] px-3 py-3 sm:px-4"
         data-reveal
       >
         <div className="flex items-center gap-1 rounded-full border border-white/10 bg-black/30 p-1">
