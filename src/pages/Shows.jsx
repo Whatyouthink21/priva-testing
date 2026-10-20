@@ -25,19 +25,20 @@ export default function Shows() {
       setKids((kidsRes.results||[]).map(r=> ({...r, media_type:"tv"})));
     }
     load();
+    window.scrollTo(0,0);
   },[]);
 
   return (
-    <div className="min-h-screen bg-[#080808] pt-4 pb-12">
-      <div className="max-w-[1600px] mx-auto px-4 md:px-8 mb-6">
+    <div className="min-h-screen bg-[#080808] pt-[64px] pb-12">
+      <div className="max-w-[1600px] mx-auto px-4 md:px-8 py-6">
         <h1 className="text-2xl md:text-3xl font-bold tracking-tight">TV Shows</h1>
         <p className="text-sm text-white/50 mt-1">Binge your favorite series streaming on PRIVA</p>
       </div>
-      <MediaRow title="Trending Shows" items={trending} />
-      <MediaRow title="Popular Shows" items={popular} />
-      <MediaRow title="On The Air" items={onAir} />
-      <MediaRow title="Top Rated Series" items={topRated} />
-      <MediaRow title="Animation" items={kids} />
+      <MediaRow title="Trending Shows" items={trending} variant="portrait" />
+      <MediaRow title="Popular Shows" items={popular} variant="portrait" />
+      <MediaRow title="On The Air" items={onAir} variant="portrait" />
+      <MediaRow title="Top Rated Series" items={topRated} variant="portrait" />
+      <MediaRow title="Animation" items={kids} variant="portrait" />
     </div>
   )
 }
