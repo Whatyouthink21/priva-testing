@@ -18,6 +18,8 @@ import { useLibrary } from '../context/LibraryContext';
 import { useToast } from '../context/ToastContext';
 import { cx, secondsToClock } from '../lib/utils';
 import DownloadModal from '../components/DownloadModal';
+import { usePalette } from '../hooks/usePalette';
+import { meshBackground, paletteStyle } from '../lib/palette';
 
 export default function Watch({ type = 'movie' }) {
   const { id } = useParams();
@@ -38,6 +40,7 @@ export default function Watch({ type = 'movie' }) {
   const [downloads, setDownloads] = useState(false);
   const [showAll, setShowAll] = useState(false);
 
+  const palette = usePalette(data?.poster_path ? IMG.poster(data.poster_path, 'w342') : null);
   const saved = progressFor({ id, type });
   const savedRef = useRef(saved);
   const lastSaveRef = useRef(0);
@@ -241,8 +244,13 @@ export default function Watch({ type = 'movie' }) {
   }
 
   return (
-    <div className="pb-16 pt-[86px]">
-      <div className="container-page">
+    <div className="relative pb-16 pt-[86px]" style={paletteStyle(palette)}>
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-[70vh] opacity-45 transition-opacity duration-1000"
+        style={{ background: meshBackground(palette) }}
+      />
+      <div className="container-page relative">
         <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2">
           <button
             onClick={() => navigate(`/${type}/${id}`)}
@@ -271,7 +279,7 @@ export default function Watch({ type = 'movie' }) {
         </div>
 
         {/* Player */}
-        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black shadow-card">
+        <div className="relative overflow-hidden rounded-2xl border border-white/15 bg-black shadow-[0_36px_90px_-40px_rgb(var(--brand)/0.9)] ring-1 ring-brand/20">
           <div className="relative aspect-video w-full">
             <iframe
               key={`${server}-${season}-${episode}-${startAt || 'live'}`}

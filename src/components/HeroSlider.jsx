@@ -89,7 +89,7 @@ export default function HeroSlider() {
   if (failed && !items.length) {
     return (
       <section className="relative isolate flex h-[74vh] min-h-[520px] items-end overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(139,92,246,0.35),transparent_55%),radial-gradient(circle_at_85%_60%,rgba(59,130,246,0.22),transparent_50%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgb(var(--brand)/0.38),transparent_55%),radial-gradient(circle_at_85%_60%,rgb(var(--accent-4)/0.22),transparent_50%)]" />
         <div className="absolute inset-0 hero-vignette" />
         <div className="container-page relative z-10 pb-16">
           <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-400">

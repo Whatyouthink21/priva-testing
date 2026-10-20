@@ -5,7 +5,7 @@
  * Their hostnames only appear here so the site never surfaces a provider name.
  */
 
-const ACCENT = '8B5CF6'; // Priva violet, passed to players that support theming
+const ACCENT = '3B82F6'; // Priva blue, passed to players that support theming
 
 const join = (base, params) => {
   const usable = Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== false && v !== '');

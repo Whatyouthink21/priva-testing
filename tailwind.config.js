@@ -12,11 +12,18 @@ export default {
           700: '#1d1d27',
           600: '#272733',
         },
+        // Driven by CSS variables so a single page can re-tint itself
+        // (see the adaptive palette on movie/TV detail pages).
         brand: {
-          DEFAULT: '#8b5cf6',
-          400: '#a78bfa',
-          500: '#8b5cf6',
-          600: '#7c3aed',
+          DEFAULT: 'rgb(var(--brand) / <alpha-value>)',
+          400: 'rgb(var(--brand-400) / <alpha-value>)',
+          500: 'rgb(var(--brand) / <alpha-value>)',
+          600: 'rgb(var(--brand-600) / <alpha-value>)',
+        },
+        accent: {
+          2: 'rgb(var(--accent-2) / <alpha-value>)',
+          3: 'rgb(var(--accent-3) / <alpha-value>)',
+          4: 'rgb(var(--accent-4) / <alpha-value>)',
         },
         gold: '#f5c518',
       },
@@ -26,7 +33,7 @@ export default {
       },
       boxShadow: {
         card: '0 24px 60px -20px rgba(0,0,0,0.85)',
-        glow: '0 0 0 1px rgba(139,92,246,0.45), 0 18px 50px -12px rgba(139,92,246,0.5)',
+        glow: '0 0 0 1px rgb(var(--brand) / 0.45), 0 18px 50px -12px rgb(var(--brand) / 0.5)',
       },
       keyframes: {
         fadeUp: {
@@ -46,8 +53,8 @@ export default {
           '100%': { backgroundPosition: '700px 0' },
         },
         pulseRing: {
-          '0%': { boxShadow: '0 0 0 0 rgba(139,92,246,0.55)' },
-          '100%': { boxShadow: '0 0 0 14px rgba(139,92,246,0)' },
+          '0%': { boxShadow: '0 0 0 0 rgb(var(--brand) / 0.55)' },
+          '100%': { boxShadow: '0 0 0 14px rgb(var(--brand) / 0)' },
         },
         floaty: {
           '0%,100%': { transform: 'translateY(0)' },

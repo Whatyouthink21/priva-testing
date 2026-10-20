@@ -19,6 +19,8 @@ import { IMG, api, money, runtimeLabel, titleOf, yearOf } from '../lib/tmdb';
 import { useLibrary } from '../context/LibraryContext';
 import { useToast } from '../context/ToastContext';
 import { useReveal } from '../hooks/useReveal';
+import { usePalette } from '../hooks/usePalette';
+import { meshBackground, paletteStyle } from '../lib/palette';
 import { cx } from '../lib/utils';
 import Row, { SectionHeading } from '../components/Row';
 import CriticsSection from '../components/CriticsSection';
@@ -45,6 +47,15 @@ export default function Detail({ type = 'movie' }) {
   const [episodes, setEpisodes] = useState([]);
   const [episodesLoading, setEpisodesLoading] = useState(false);
   const [showAllEpisodes, setShowAllEpisodes] = useState(false);
+
+  // Sample the artwork so the page takes on this title's own colours.
+  const palette = usePalette(
+    data?.poster_path
+      ? IMG.poster(data.poster_path, 'w500')
+      : data?.backdrop_path
+        ? IMG.backdrop(data.backdrop_path, 'w780')
+        : null
+  );
 
   useReveal([loading, episodes.length, data?.id]);
 
@@ -190,8 +201,24 @@ export default function Detail({ type = 'movie' }) {
   const companies = (data.production_companies || []).slice(0, 4);
   const networks = (data.networks || []).slice(0, 4);
 
+  const paletteColors = palette?.colors || [];
+
   return (
-    <article className="pb-10">
+    <article
+      className="relative pb-10"
+      style={{
+        ...paletteStyle(palette),
+        backgroundImage:
+          'linear-gradient(180deg, transparent 0%, rgb(var(--brand) / 0.06) 38%, rgb(var(--accent-2) / 0.045) 62%, transparent 100%)',
+      }}
+    >
+      {/* Per-title colour wash */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-[120vh] opacity-60 transition-opacity duration-1000"
+        style={{ background: meshBackground(palette) }}
+      />
+
       {/* Hero */}
       <div className="relative">
         <div className="absolute inset-x-0 top-0 h-[74vh] min-h-[520px] overflow-hidden">
@@ -202,6 +229,11 @@ export default function Detail({ type = 'movie' }) {
               className="h-full w-full object-cover object-top"
             />
           )}
+          <div
+            aria-hidden
+            className="absolute inset-0 opacity-55 mix-blend-soft-light transition-opacity duration-1000"
+            style={{ background: meshBackground(palette) }}
+          />
           <div className="absolute inset-0 hero-vignette" />
           <div className="absolute inset-x-0 bottom-0 h-52 bg-gradient-to-t from-ink-950 via-ink-950/70 to-transparent" />
         </div>
@@ -215,7 +247,7 @@ export default function Detail({ type = 'movie' }) {
           </button>
 
           <div className="flex flex-col gap-7 md:flex-row md:items-end">
-            <div className="relative w-[150px] shrink-0 overflow-hidden rounded-xl border border-white/10 shadow-card sm:w-[200px] md:w-[230px]">
+            <div className="relative w-[150px] shrink-0 overflow-hidden rounded-xl border border-white/15 shadow-[0_28px_70px_-28px_rgb(var(--brand)/0.85)] ring-1 ring-brand/25 sm:w-[200px] md:w-[230px]">
               {data.poster_path ? (
                 <img
                   src={IMG.poster(data.poster_path, 'w500')}
@@ -271,6 +303,22 @@ export default function Detail({ type = 'movie' }) {
                       {g.name}
                     </Link>
                   ))}
+                </div>
+              )}
+
+              {paletteColors.length > 0 && (
+                <div className="mt-3.5 flex items-center gap-2.5">
+                  <span
+                    className="flex h-1.5 w-24 overflow-hidden rounded-full ring-1 ring-white/15"
+                    title="Colours sampled from this title's artwork"
+                  >
+                    {paletteColors.map((color, i) => (
+                      <span key={i} className="h-full flex-1" style={{ background: color }} />
+                    ))}
+                  </span>
+                  <span className="text-[10px] font-medium uppercase tracking-[0.16em] text-white/30">
+                    Sampled from artwork
+                  </span>
                 </div>
               )}
 
