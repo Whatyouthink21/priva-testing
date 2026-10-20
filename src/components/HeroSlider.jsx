@@ -28,6 +28,7 @@ async function enrich(item) {
 
 export default function HeroSlider() {
   const [items, setItems] = useState([]);
+  const [failed, setFailed] = useState(false);
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const timer = useRef(null);
@@ -60,7 +61,7 @@ export default function HeroSlider() {
         );
         if (alive) setItems(enriched);
       })
-      .catch(() => {});
+      .catch(() => alive && setFailed(true));
     return () => {
       alive = false;
     };
@@ -83,6 +84,36 @@ export default function HeroSlider() {
     },
     [toggleList, toast]
   );
+
+
+  if (failed && !items.length) {
+    return (
+      <section className="relative isolate flex h-[74vh] min-h-[520px] items-end overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(139,92,246,0.35),transparent_55%),radial-gradient(circle_at_85%_60%,rgba(59,130,246,0.22),transparent_50%)]" />
+        <div className="absolute inset-0 hero-vignette" />
+        <div className="container-page relative z-10 pb-16">
+          <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-400">
+            Priva
+          </p>
+          <h1 className="max-w-2xl text-[clamp(2rem,5vw,3.8rem)] font-black leading-[0.98] tracking-[-0.035em]">
+            Movies, series and anime.<br />One place.
+          </h1>
+          <p className="mt-4 max-w-md text-[13.5px] leading-relaxed text-white/55">
+            The live catalogue could not be reached just now. Browse the full library or
+            try again in a moment.
+          </p>
+          <div className="mt-6 flex flex-wrap gap-2.5">
+            <button onClick={() => navigate('/movies')} className="btn-primary px-6 py-3">
+              <Play size={16} className="fill-ink-950" /> Browse movies
+            </button>
+            <button onClick={() => window.location.reload()} className="btn-ghost px-5 py-3">
+              Retry
+            </button>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   if (!current) {
     return (
