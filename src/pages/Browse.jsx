@@ -3,17 +3,9 @@ import { useSearchParams } from 'react-router-dom';
 import { ChevronDown, Loader2, SlidersHorizontal } from 'lucide-react';
 import MediaGrid from '../components/MediaGrid';
 import { api, normalize } from '../lib/tmdb';
+import { buildBrowseRequest, SORTS } from '../lib/browseQuery';
 import { useReveal } from '../hooks/useReveal';
 import { cx } from '../lib/utils';
-
-const SORTS = [
-  { id: 'popular', label: 'Popular' },
-  { id: 'top_rated', label: 'Top rated' },
-  { id: 'newest', label: 'Newest' },
-  { id: 'now_playing', label: 'In cinemas', movieOnly: true },
-  { id: 'upcoming', label: 'Coming soon', movieOnly: true },
-  { id: 'trending', label: 'Trending' },
-];
 
 const HEADINGS = {
   movie: {
@@ -48,6 +40,7 @@ export default function Browse({ kind = 'movie' }) {
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState('');
   const sentinel = useRef(null);
+  const gridRef = useRef(null);
   const requestId = useRef(0);
 
   useReveal([kind, genre, sort]);
@@ -70,33 +63,7 @@ export default function Browse({ kind = 'movie' }) {
   }, [type]);
 
   const buildRequest = useCallback(
-    (requestedPage) => {
-      if (kind === 'anime') {
-        return api.discover('tv', {
-          page: requestedPage,
-          with_genres: genre ? `16,${genre}` : '16',
-          with_original_language: 'ja',
-          sort_by: sort === 'top_rated' ? 'vote_average.desc' : 'popularity.desc',
-          'vote_count.gte': 40,
-        });
-      }
-      if (sort === 'popular') return api.popular(type, requestedPage);
-      if (sort === 'top_rated') return api.topRated(type, requestedPage);
-      if (sort === 'now_playing' && type === 'movie') return api.nowPlaying(requestedPage);
-      if (sort === 'upcoming' && type === 'movie') return api.upcoming(requestedPage);
-      if (sort === 'trending') return api.trending(type, 'week');
-      return api.discover(type, {
-        page: requestedPage,
-        ...(genre ? { with_genres: genre } : {}),
-        sort_by:
-          sort === 'newest'
-            ? type === 'movie'
-              ? 'primary_release_date.desc'
-              : 'first_air_date.desc'
-            : 'popularity.desc',
-        'vote_count.gte': sort === 'newest' ? 10 : 20,
-      });
-    },
+    (requestedPage) => buildBrowseRequest(api, { kind, type, genre, sort, page: requestedPage }),
     [kind, type, genre, sort]
   );
 
@@ -104,6 +71,21 @@ export default function Browse({ kind = 'movie' }) {
   useEffect(() => {
     setPage(1);
   }, [genre, sort, kind]);
+
+  const firstFilterRun = useRef(true);
+  useEffect(() => {
+    if (firstFilterRun.current) {
+      firstFilterRun.current = false;
+      return;
+    }
+    const top = gridRef.current?.getBoundingClientRect().top ?? 0;
+    if (top < 90) {
+      window.scrollTo({
+        top: window.scrollY + top - 96,
+        behavior: 'smooth',
+      });
+    }
+  }, [genre, sort]);
 
   // First page / filter change
   useEffect(() => {
@@ -180,7 +162,8 @@ export default function Browse({ kind = 'movie' }) {
       </header>
 
       <div
-        className="sticky top-[70px] z-30 -mx-4 mb-6 border-y border-white/[0.06] bg-ink-950/85 px-4 py-3 backdrop-blur-xl sm:-mx-6 sm:px-6"
+        ref={gridRef}
+        className="mb-5 scroll-mt-24 rounded-2xl border border-white/[0.06] bg-white/[0.025] px-3 py-3 sm:px-4"
         data-reveal
       >
         <div className="flex flex-col gap-3">
@@ -213,7 +196,11 @@ export default function Browse({ kind = 'movie' }) {
 
           <div className="flex items-center justify-between gap-3">
             <p className="text-[12px] text-white/35">
-              {loading ? 'Loading titles…' : `${items.length} titles loaded`}
+              {loading
+                ? 'Loading titles…'
+                : `${items.length} ${items.length === 1 ? 'title' : 'titles'}${
+                    genre ? ' in this genre' : ''
+                  }`}
             </p>
             <div className="relative">
               <select

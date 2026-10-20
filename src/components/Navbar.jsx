@@ -89,7 +89,8 @@ export default function Navbar() {
 
   return (
     <>
-      <header className="nav-shell fixed inset-x-0 top-0 z-50 border-b border-transparent bg-gradient-to-b from-black/70 via-black/30 to-transparent">
+      <header className="nav-shell fixed inset-x-0 top-0 z-50">
+        <span aria-hidden className="nav-scrim" />
         <div className="container-page flex h-[70px] items-center gap-3">
           <Logo className="mr-1 shrink-0" />
 
@@ -223,8 +224,10 @@ export default function Navbar() {
         {/* Mobile sheet */}
         <div
           className={cx(
-            'overflow-hidden border-t border-white/[0.06] bg-ink-950/95 backdrop-blur-xl transition-[max-height,opacity] duration-500 ease-smooth lg:hidden',
-            menuOpen ? 'max-h-[420px] opacity-100' : 'max-h-0 opacity-0'
+            'overflow-hidden transition-[max-height,opacity] duration-500 ease-smooth lg:hidden',
+            menuOpen
+              ? 'max-h-[420px] border-t border-white/[0.06] bg-ink-950/95 opacity-100 backdrop-blur-xl'
+              : 'max-h-0 border-t-0 opacity-0'
           )}
         >
           <nav className="container-page flex flex-col gap-1 py-4">
