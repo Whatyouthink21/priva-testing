@@ -20,7 +20,7 @@ import { useLibrary } from '../context/LibraryContext';
 import { useToast } from '../context/ToastContext';
 import { useReveal } from '../hooks/useReveal';
 import { usePalette } from '../hooks/usePalette';
-import { meshBackground, paletteStyle } from '../lib/palette';
+import { aurora, colourGrade, meshBackground, paletteStyle, swatchGradient } from '../lib/palette';
 import { cx } from '../lib/utils';
 import Row, { SectionHeading } from '../components/Row';
 import CriticsSection from '../components/CriticsSection';
@@ -202,40 +202,64 @@ export default function Detail({ type = 'movie' }) {
   const networks = (data.networks || []).slice(0, 4);
 
   const paletteColors = palette?.colors || [];
+  const hasPalette = Boolean(palette);
 
   return (
     <article
-      className="relative pb-10"
+      className="relative pb-10 transition-[background-image] duration-1000"
       style={{
         ...paletteStyle(palette),
-        backgroundImage:
-          'linear-gradient(180deg, transparent 0%, rgb(var(--brand) / 0.06) 38%, rgb(var(--accent-2) / 0.045) 62%, transparent 100%)',
+        backgroundImage: hasPalette
+          ? 'linear-gradient(180deg, transparent 0%, rgb(var(--brand) / 0.16) 24%, rgb(var(--accent-2) / 0.13) 44%, rgb(var(--accent-3) / 0.09) 64%, rgb(var(--accent-4) / 0.06) 80%, transparent 100%)'
+          : undefined,
       }}
     >
-      {/* Per-title colour wash */}
+      {/* Aurora blobs carrying the palette down the page */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-[120vh] opacity-60 transition-opacity duration-1000"
-        style={{ background: meshBackground(palette) }}
-      />
+        className="pointer-events-none absolute inset-0 overflow-hidden opacity-[0.55] transition-opacity duration-1000"
+      >
+        <div
+          className="absolute inset-x-0 top-[32vh] bottom-0"
+          style={{ background: aurora(palette) }}
+        />
+      </div>
 
       {/* Hero */}
       <div className="relative">
-        <div className="absolute inset-x-0 top-0 h-[74vh] min-h-[520px] overflow-hidden">
+        <div className="absolute inset-x-0 top-0 h-[80vh] min-h-[560px] overflow-hidden">
           {data.backdrop_path && (
             <img
               src={IMG.backdrop(data.backdrop_path, 'w1280')}
               alt=""
-              className="h-full w-full object-cover object-top"
+              className="h-full w-full scale-[1.02] object-cover object-top"
             />
           )}
+
+          {/* 1 · hue grade: pulls the whole image into the title's colour mix */}
           <div
             aria-hidden
-            className="absolute inset-0 opacity-55 mix-blend-soft-light transition-opacity duration-1000"
-            style={{ background: meshBackground(palette) }}
+            className="absolute inset-0 mix-blend-color opacity-[0.65] transition-opacity duration-1000"
+            style={{ background: colourGrade(palette) }}
           />
-          <div className="absolute inset-0 hero-vignette" />
-          <div className="absolute inset-x-0 bottom-0 h-52 bg-gradient-to-t from-ink-950 via-ink-950/70 to-transparent" />
+          {/* 2 · coloured light so the grade keeps its glow */}
+          <div
+            aria-hidden
+            className="absolute inset-0 mix-blend-screen opacity-[0.5] transition-opacity duration-1000"
+            style={{ background: meshBackground(palette, 1.15) }}
+          />
+          {/* 3 · contrast + legibility */}
+          <div className="absolute inset-0 hero-vignette-soft" />
+          <div className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-ink-950 via-ink-950/80 to-transparent" />
+
+          {/* 4 · palette rule along the bottom edge */}
+          {hasPalette && (
+            <div className="absolute inset-x-0 bottom-0 flex h-[3px] w-full">
+              {paletteColors.map((color, i) => (
+                <span key={i} className="h-full flex-1" style={{ background: color }} />
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="container-page relative pt-[128px]">
@@ -247,7 +271,7 @@ export default function Detail({ type = 'movie' }) {
           </button>
 
           <div className="flex flex-col gap-7 md:flex-row md:items-end">
-            <div className="relative w-[150px] shrink-0 overflow-hidden rounded-xl border border-white/15 shadow-[0_28px_70px_-28px_rgb(var(--brand)/0.85)] ring-1 ring-brand/25 sm:w-[200px] md:w-[230px]">
+            <div className="relative w-[150px] shrink-0 overflow-hidden rounded-xl border border-white/20 shadow-[0_34px_90px_-24px_rgb(var(--brand)/0.95),0_0_0_1px_rgb(var(--accent-2)/0.35)] ring-1 ring-brand/40 sm:w-[200px] md:w-[230px]">
               {data.poster_path ? (
                 <img
                   src={IMG.poster(data.poster_path, 'w500')}
@@ -288,7 +312,14 @@ export default function Detail({ type = 'movie' }) {
                 )}
               </div>
 
-              <h1 className="text-[clamp(2rem,4.6vw,3.7rem)] font-black leading-[0.98] tracking-[-0.035em] text-shadow-hero">
+              <h1
+                className="bg-clip-text text-[clamp(2rem,4.6vw,3.7rem)] font-black leading-[0.98] tracking-[-0.035em] text-transparent drop-shadow-[0_10px_30px_rgba(0,0,0,0.65)]"
+                style={{
+                  backgroundImage: hasPalette
+                    ? `linear-gradient(96deg, #ffffff 22%, ${paletteColors[1] || '#fff'} 78%, ${paletteColors[2] || '#fff'} 100%)`
+                    : undefined,
+                }}
+              >
                 {title}
               </h1>
 
@@ -375,7 +406,7 @@ export default function Detail({ type = 'movie' }) {
 
       {/* Facts */}
       <section className="container-page mt-12" data-reveal>
-        <div className="grid gap-x-8 gap-y-5 rounded-2xl border border-white/[0.07] bg-white/[0.025] p-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-x-8 gap-y-5 overflow-hidden rounded-2xl border border-white/10 p-5 sm:grid-cols-2 lg:grid-cols-4" style={{ backgroundImage: hasPalette ? `linear-gradient(135deg, rgb(var(--brand)/0.16), rgb(255 255 255 / 0.02) 45%, rgb(var(--accent-2)/0.12))` : undefined }}>
           <Fact label="Status" value={data.status || '—'} />
           <Fact
             label={type === 'tv' ? 'First aired' : 'Release date'}

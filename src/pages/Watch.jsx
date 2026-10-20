@@ -19,7 +19,7 @@ import { useToast } from '../context/ToastContext';
 import { cx, secondsToClock } from '../lib/utils';
 import DownloadModal from '../components/DownloadModal';
 import { usePalette } from '../hooks/usePalette';
-import { meshBackground, paletteStyle } from '../lib/palette';
+import { colourGrade, meshBackground, paletteStyle } from '../lib/palette';
 
 export default function Watch({ type = 'movie' }) {
   const { id } = useParams();
@@ -247,8 +247,13 @@ export default function Watch({ type = 'movie' }) {
     <div className="relative pb-16 pt-[86px]" style={paletteStyle(palette)}>
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-[70vh] opacity-45 transition-opacity duration-1000"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[70vh] opacity-70 transition-opacity duration-1000"
         style={{ background: meshBackground(palette) }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-[220px] mix-blend-color opacity-25"
+        style={{ background: colourGrade(palette) }}
       />
       <div className="container-page relative">
         <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2">

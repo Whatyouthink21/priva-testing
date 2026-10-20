@@ -38,14 +38,19 @@ The base UI is electric blue, driven entirely by CSS custom properties
 (`--brand`, `--brand-400`, `--brand-600`, `--accent-2/3/4`) so the palette can be
 changed in one place (`src/index.css`).
 
-**Every movie / TV page re-tints itself from its own artwork.** When a title
+**Every movie / TV page re-tints itself from its own artwork.** The hero uses a
+`mix-blend-mode: color` hue grade built from four sampled colours, reinforced by a
+screen-blended light wash and an aurora further down the page, so the whole page
+reads as that title's palette. When a title
 loads, its poster is sampled on a canvas (`src/lib/palette.js`): pixels are
 bucketed by hue, filtered for saturation and brightness, and four well-separated
 colours are kept. Those colours become the page's brand tokens plus a
 multi-colour mesh wash over the hero, the page background and the player, so
 *Spider-Man* feels red/blue, *Dune* sandy, *Arcade* neon — automatically, with no
-per-title configuration. Palettes are cached per image URL and the code falls
-back to the blue theme if an image can't be sampled (CORS or canvas errors).
+per-title configuration. Palettes are cached per image URL. If the CDN blocks canvas reads, the poster is
+re-fetched through an image proxy (`wsrv.nl`) before giving up, and only then does
+the page fall back to the blue theme. Greyscale artwork gets a muted steel tint
+instead of an invented rainbow.
 
 ## Stack
 
