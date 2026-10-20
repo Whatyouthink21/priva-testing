@@ -58,7 +58,7 @@ export default function ProviderRow() {
                 {provider.provider_name}
               </span>
             )}
-            <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(139,92,246,0.35),transparent_60%)] opacity-0 transition duration-500 group-hover:opacity-100" />
+            <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgb(var(--brand)/0.35),transparent_60%)] opacity-0 transition duration-500 group-hover:opacity-100" />
           </Link>
         ))}
       </div>

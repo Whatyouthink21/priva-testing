@@ -32,6 +32,21 @@ reviews, numbered playback servers and per-episode resume — all on one domain.
 
 Live TV, sports and games sections are intentionally excluded.
 
+## Theme
+
+The base UI is electric blue, driven entirely by CSS custom properties
+(`--brand`, `--brand-400`, `--brand-600`, `--accent-2/3/4`) so the palette can be
+changed in one place (`src/index.css`).
+
+**Every movie / TV page re-tints itself from its own artwork.** When a title
+loads, its poster is sampled on a canvas (`src/lib/palette.js`): pixels are
+bucketed by hue, filtered for saturation and brightness, and four well-separated
+colours are kept. Those colours become the page's brand tokens plus a
+multi-colour mesh wash over the hero, the page background and the player, so
+*Spider-Man* feels red/blue, *Dune* sandy, *Arcade* neon — automatically, with no
+per-title configuration. Palettes are cached per image URL and the code falls
+back to the blue theme if an image can't be sampled (CORS or canvas errors).
+
 ## Stack
 
 - Vite 6 + React 19 + React Router 6
