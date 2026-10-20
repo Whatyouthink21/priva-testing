@@ -309,43 +309,45 @@ export function paletteStyle(palette) {
   return palette?.tokens || undefined;
 }
 
-const alpha = (value, strength) =>
-  `${Math.round(clamp(value * strength, 0, 0.95) * 100)}%`;
+/**
+ * One soft blob: the colour fades out across 85% of the radius, so overlapping
+ * blobs melt into each other instead of leaving visible edges or bands.
+ */
+function blob(triple, x, y, w, h, alpha) {
+  const a = clamp(alpha, 0, 0.6);
+  const mid = (a * 0.58).toFixed(3);
+  const low = (a * 0.2).toFixed(3);
+  return `radial-gradient(${w}% ${h}% at ${x}% ${y}%, rgb(${triple} / ${a.toFixed(3)}) 0%, rgb(${triple} / ${mid}) 30%, rgb(${triple} / ${low}) 58%, rgb(${triple} / 0) 86%)`;
+}
 
-/** Multi-colour light wash — used as a screen/additive layer. */
-export function meshBackground(palette, strength = 1) {
+/**
+ * The whole page wash: four overlapping blobs, one per sampled colour, placed
+ * so they cross over each other in the middle. No hard stops anywhere.
+ */
+export function ambientBackground(palette, strength = 1) {
   if (!palette) return undefined;
   const [a, b, c, d] = palette.triples;
   return [
-    `radial-gradient(58% 42% at 8% 0%, rgb(${a} / ${alpha(0.55, strength)}), transparent 72%)`,
-    `radial-gradient(46% 38% at 92% 4%, rgb(${b} / ${alpha(0.48, strength)}), transparent 70%)`,
-    `radial-gradient(64% 48% at 46% 18%, rgb(${c} / ${alpha(0.42, strength)}), transparent 74%)`,
-    `radial-gradient(52% 40% at 18% 62%, rgb(${d} / ${alpha(0.36, strength)}), transparent 76%)`,
+    blob(a, 8, -2, 80, 62, 0.34 * strength),
+    blob(b, 96, 6, 66, 52, 0.28 * strength),
+    blob(c, 48, 30, 92, 58, 0.2 * strength),
+    blob(d, 18, 74, 74, 56, 0.17 * strength),
   ].join(', ');
 }
 
-/** Full-bleed hue grade — used with `mix-blend-mode: color` over artwork. */
-export function colourGrade(palette) {
-  if (!palette) return undefined;
-  const [a, b, c, d] = palette.colors;
-  return `linear-gradient(115deg, ${a} 0%, ${b} 34%, ${c} 66%, ${d} 100%)`;
-}
-
-/** Even 4-stop bar, for accent rules and progress strips. */
-export function swatchGradient(palette, angle = 90) {
-  if (!palette) return undefined;
-  const [a, b, c, d] = palette.colors;
-  return `linear-gradient(${angle}deg, ${a} 0%, ${b} 34%, ${c} 67%, ${d} 100%)`;
-}
-
-/** Soft glows for empty areas further down the page. */
-export function aurora(palette, strength = 1) {
+/** Hero lighting: denser mix for artwork, meant for `mix-blend-mode: color`. */
+export function heroWash(palette, strength = 1) {
   if (!palette) return undefined;
   const [a, b, c, d] = palette.triples;
   return [
-    `radial-gradient(circle at 6% 22%, rgb(${a} / ${alpha(0.4, strength)}), transparent 42%)`,
-    `radial-gradient(circle at 88% 62%, rgb(${b} / ${alpha(0.32, strength)}), transparent 44%)`,
-    `radial-gradient(circle at 42% 88%, rgb(${c} / ${alpha(0.26, strength)}), transparent 46%)`,
-    `radial-gradient(circle at 72% 12%, rgb(${d} / ${alpha(0.22, strength)}), transparent 40%)`,
+    blob(a, 14, 4, 74, 80, 0.55 * strength),
+    blob(b, 88, 12, 70, 74, 0.5 * strength),
+    blob(c, 52, 46, 96, 76, 0.36 * strength),
+    blob(d, 26, 96, 86, 66, 0.3 * strength),
   ].join(', ');
+}
+
+/** Small, muted dots showing the sampled hues (never hard colour bars). */
+export function swatchDots(palette) {
+  return palette?.colors || [];
 }

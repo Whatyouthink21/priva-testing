@@ -20,7 +20,7 @@ import { useLibrary } from '../context/LibraryContext';
 import { useToast } from '../context/ToastContext';
 import { useReveal } from '../hooks/useReveal';
 import { usePalette } from '../hooks/usePalette';
-import { aurora, colourGrade, meshBackground, paletteStyle, swatchGradient } from '../lib/palette';
+import { ambientBackground, heroWash, paletteStyle } from '../lib/palette';
 import { cx } from '../lib/utils';
 import Row, { SectionHeading } from '../components/Row';
 import CriticsSection from '../components/CriticsSection';
@@ -206,22 +206,19 @@ export default function Detail({ type = 'movie' }) {
 
   return (
     <article
-      className="relative pb-10 transition-[background-image] duration-1000"
-      style={{
-        ...paletteStyle(palette),
-        backgroundImage: hasPalette
-          ? 'linear-gradient(180deg, transparent 0%, rgb(var(--brand) / 0.16) 24%, rgb(var(--accent-2) / 0.13) 44%, rgb(var(--accent-3) / 0.09) 64%, rgb(var(--accent-4) / 0.06) 80%, transparent 100%)'
-          : undefined,
-      }}
+      className="relative isolate overflow-hidden pb-10 transition-colors duration-1000"
+      style={paletteStyle(palette)}
     >
-      {/* Aurora blobs carrying the palette down the page */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 overflow-hidden opacity-[0.55] transition-opacity duration-1000"
-      >
+      {/* One continuous wash from the top of the hero to the footer — the same
+          four colours, overlapping so they blend rather than band. */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 transition-opacity duration-1000">
         <div
-          className="absolute inset-x-0 top-[32vh] bottom-0"
-          style={{ background: aurora(palette) }}
+          className="fade-bottom absolute inset-x-0 top-0 h-[125vh] opacity-90"
+          style={{ background: ambientBackground(palette, 1) }}
+        />
+        <div
+          className="fade-edges absolute inset-x-0 bottom-0 top-[65vh] opacity-60"
+          style={{ background: ambientBackground(palette, 0.65) }}
         />
       </div>
 
@@ -236,30 +233,21 @@ export default function Detail({ type = 'movie' }) {
             />
           )}
 
-          {/* 1 · hue grade: pulls the whole image into the title's colour mix */}
+          {/* Coloured light from the poster, faded out before the hero ends */}
           <div
             aria-hidden
-            className="absolute inset-0 mix-blend-color opacity-[0.65] transition-opacity duration-1000"
-            style={{ background: colourGrade(palette) }}
+            className="fade-bottom absolute inset-0 mix-blend-color opacity-[0.42] transition-opacity duration-1000"
+            style={{ background: heroWash(palette) }}
           />
-          {/* 2 · coloured light so the grade keeps its glow */}
           <div
             aria-hidden
-            className="absolute inset-0 mix-blend-screen opacity-[0.5] transition-opacity duration-1000"
-            style={{ background: meshBackground(palette, 1.15) }}
+            className="fade-bottom absolute inset-0 mix-blend-soft-light opacity-[0.38] transition-opacity duration-1000"
+            style={{ background: heroWash(palette, 0.9) }}
           />
-          {/* 3 · contrast + legibility */}
-          <div className="absolute inset-0 hero-vignette-soft" />
-          <div className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-ink-950 via-ink-950/80 to-transparent" />
 
-          {/* 4 · palette rule along the bottom edge */}
-          {hasPalette && (
-            <div className="absolute inset-x-0 bottom-0 flex h-[3px] w-full">
-              {paletteColors.map((color, i) => (
-                <span key={i} className="h-full flex-1" style={{ background: color }} />
-              ))}
-            </div>
-          )}
+          {/* Contrast + legibility */}
+          <div className="absolute inset-0 hero-vignette-soft" />
+          <div className="absolute inset-x-0 bottom-0 h-64 bg-gradient-to-t from-ink-950 via-ink-950/85 to-transparent" />
         </div>
 
         <div className="container-page relative pt-[128px]">
@@ -271,7 +259,7 @@ export default function Detail({ type = 'movie' }) {
           </button>
 
           <div className="flex flex-col gap-7 md:flex-row md:items-end">
-            <div className="relative w-[150px] shrink-0 overflow-hidden rounded-xl border border-white/20 shadow-[0_34px_90px_-24px_rgb(var(--brand)/0.95),0_0_0_1px_rgb(var(--accent-2)/0.35)] ring-1 ring-brand/40 sm:w-[200px] md:w-[230px]">
+            <div className="relative w-[150px] shrink-0 overflow-hidden rounded-xl border border-white/12 shadow-[0_30px_70px_-30px_rgba(0,0,0,0.95)] sm:w-[200px] md:w-[230px]">
               {data.poster_path ? (
                 <img
                   src={IMG.poster(data.poster_path, 'w500')}
@@ -316,7 +304,7 @@ export default function Detail({ type = 'movie' }) {
                 className="bg-clip-text text-[clamp(2rem,4.6vw,3.7rem)] font-black leading-[0.98] tracking-[-0.035em] text-transparent drop-shadow-[0_10px_30px_rgba(0,0,0,0.65)]"
                 style={{
                   backgroundImage: hasPalette
-                    ? `linear-gradient(96deg, #ffffff 22%, ${paletteColors[1] || '#fff'} 78%, ${paletteColors[2] || '#fff'} 100%)`
+                    ? `linear-gradient(100deg, #ffffff 0%, #ffffff 34%, ${paletteColors[1] || '#ffffff'} 88%)`
                     : undefined,
                 }}
               >
@@ -334,22 +322,6 @@ export default function Detail({ type = 'movie' }) {
                       {g.name}
                     </Link>
                   ))}
-                </div>
-              )}
-
-              {paletteColors.length > 0 && (
-                <div className="mt-3.5 flex items-center gap-2.5">
-                  <span
-                    className="flex h-1.5 w-24 overflow-hidden rounded-full ring-1 ring-white/15"
-                    title="Colours sampled from this title's artwork"
-                  >
-                    {paletteColors.map((color, i) => (
-                      <span key={i} className="h-full flex-1" style={{ background: color }} />
-                    ))}
-                  </span>
-                  <span className="text-[10px] font-medium uppercase tracking-[0.16em] text-white/30">
-                    Sampled from artwork
-                  </span>
                 </div>
               )}
 
@@ -406,7 +378,7 @@ export default function Detail({ type = 'movie' }) {
 
       {/* Facts */}
       <section className="container-page mt-12" data-reveal>
-        <div className="grid gap-x-8 gap-y-5 overflow-hidden rounded-2xl border border-white/10 p-5 sm:grid-cols-2 lg:grid-cols-4" style={{ backgroundImage: hasPalette ? `linear-gradient(135deg, rgb(var(--brand)/0.16), rgb(255 255 255 / 0.02) 45%, rgb(var(--accent-2)/0.12))` : undefined }}>
+        <div className="grid gap-x-8 gap-y-5 rounded-2xl border border-white/[0.07] bg-white/[0.03] p-5 backdrop-blur-sm sm:grid-cols-2 lg:grid-cols-4">
           <Fact label="Status" value={data.status || '—'} />
           <Fact
             label={type === 'tv' ? 'First aired' : 'Release date'}
