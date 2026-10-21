@@ -8,7 +8,7 @@ import ProviderSpotlight from '../components/ProviderSpotlight';
 import { api } from '../lib/tmdb';
 import { useLibrary } from '../context/LibraryContext';
 import { useReveal } from '../hooks/useReveal';
-import { Play } from 'lucide-react';
+import { Play, X } from 'lucide-react';
 
 const upcomingRow = (page = 1) => api.discover('movie', { sort_by: 'primary_release_date.desc', 'vote_count.gte': 50, page });
 const topRatedTv = (page = 1) => api.topRated('tv', page);
