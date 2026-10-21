@@ -111,8 +111,10 @@ export default function Settings() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-[13.5px] font-medium">Default server</p>
-              <p className="mt-0.5 text-[12px] text-white/35">
-                Which source the player tries first.
+              <p className="mt-0.5 text-[12px] leading-relaxed text-white/35">
+                Which source the player tries first. Server 3 plays from a personal
+                library when one is configured; anime titles use the Anime server
+                automatically.
               </p>
             </div>
             <div className="flex gap-1.5">
