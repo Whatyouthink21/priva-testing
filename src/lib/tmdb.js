@@ -4,6 +4,7 @@ const BASE = 'https://api.themoviedb.org/3';
 const IMAGE_BASE = 'https://image.tmdb.org/t/p';
 
 const requestCache = new Map();
+const resolvedDataCache = new Map();
 const logoCache = new Map();
 
 export const GENRE_MAP = {
@@ -47,13 +48,18 @@ function buildQuery(params = {}) {
 
 export async function tmdb(path, params = {}, { signal } = {}) {
   const url = `${BASE}${path}?${buildQuery(params)}`;
+  if (!signal && resolvedDataCache.has(url)) {
+    return resolvedDataCache.get(url);
+  }
   if (!signal && requestCache.has(url)) {
     return requestCache.get(url);
   }
   const promise = fetch(url, { signal })
     .then(async (res) => {
       if (!res.ok) throw new Error(`TMDB ${res.status}: ${path}`);
-      return res.json();
+      const json = await res.json();
+      resolvedDataCache.set(url, json);
+      return json;
     })
     .catch((err) => {
       requestCache.delete(url);
@@ -65,9 +71,9 @@ export async function tmdb(path, params = {}, { signal } = {}) {
 }
 
 export const IMG = {
-  poster: (p, size = 'w500') => (p ? `${IMAGE_BASE}/${size}${p}` : null),
+  poster: (p, size = 'w342') => (p ? `${IMAGE_BASE}/${size}${p}` : null),
   backdrop: (p, size = 'w1280') => (p ? `${IMAGE_BASE}/${size}${p}` : null),
-  original: (p) => (p ? `${IMAGE_BASE}/original${p}` : null),
+  still: (p, size = 'w500') => (p ? `${IMAGE_BASE}/${size}${p}` : null),
   logo: (p, size = 'w500') => (p ? `${IMAGE_BASE}/${size}${p}` : null),
   profile: (p, size = 'w185') => (p ? `${IMAGE_BASE}/${size}${p}` : null),
   profileLg: (p) => (p ? `${IMAGE_BASE}/h632${p}` : null),
@@ -140,7 +146,7 @@ export function pickBestLogo(images) {
     .filter((l) => l.iso_639_1 === 'en' && l.file_path && !l.file_path.endsWith('.svg'))
     .sort((a, b) => (b.vote_average || 0) - (a.vote_average || 0));
   if (en.length) return en[0].file_path;
-  const neutral = logos.filter((l) => !l.iso_639_1 && l.file_path);
+  const neutral = logos.filter((l) => !l.iso_639_1 && l.file_path && !l.file_path.endsWith('.svg'));
   if (neutral.length) return neutral[0].file_path;
   return logos[0]?.file_path || null;
 }
@@ -153,6 +159,7 @@ export function normalizeItem(raw, fallbackType = 'movie') {
     ? raw.genres.map((g) => g.name)
     : (raw.genre_ids || []).map((id) => GENRE_MAP[id]).filter(Boolean);
 
+  const cachedLogo = logoCache.get(`${type}:${raw.id}`);
   return {
     id: raw.id,
     type,
@@ -161,7 +168,7 @@ export function normalizeItem(raw, fallbackType = 'movie') {
     title: titleOf(raw),
     poster: raw.poster || raw.poster_path || null,
     backdrop: raw.backdrop || raw.backdrop_path || null,
-    logo: raw.logo || null,
+    logo: raw.logo || (typeof cachedLogo === 'string' ? cachedLogo : null),
     rating: Number(raw.vote_average ?? raw.rating ?? 0),
     year: yearOf(raw),
     overview: raw.overview || '',
@@ -170,29 +177,34 @@ export function normalizeItem(raw, fallbackType = 'movie') {
   };
 }
 
-export async function fetchLogoPath(type, id) {
-  const key = `${type}:${id}`;
-  if (logoCache.has(key)) return logoCache.get(key);
-  const p = tmdb(`/${type}/${id}/images`, { include_image_language: 'en,null' })
-    .then((img) => pickBestLogo(img))
-    .catch(() => null);
-  logoCache.set(key, p);
-  return p;
-}
-
-export async function hydrateHeroSlides(items = [], fallbackType = 'movie', count = 10) {
-  const base = items
-    .filter((x) => x && (x.backdrop_path || x.backdrop) && (x.poster_path || x.poster))
+/**
+ * Synchronously prepares up to 10 hero slides immediately with zero network wait.
+ */
+export function prepareHeroSlides(items = [], fallbackType = 'movie', count = 10) {
+  return items
+    .filter((x) => x && (x.backdrop_path || x.backdrop || x.poster_path || x.poster))
     .slice(0, count)
     .map((x) => normalizeItem(x, fallbackType));
+}
 
-  const withLogos = await Promise.all(
-    base.map(async (slide) => {
-      const logo = slide.logo || (await fetchLogoPath(slide.type, slide.id));
-      return { ...slide, logo };
+export async function fetchLogoPath(type, id) {
+  const key = `${type}:${id}`;
+  if (logoCache.has(key)) {
+    const val = logoCache.get(key);
+    return val instanceof Promise ? val : Promise.resolve(val);
+  }
+  const p = tmdb(`/${type}/${id}/images`, { include_image_language: 'en,null' })
+    .then((img) => {
+      const picked = pickBestLogo(img) || '';
+      logoCache.set(key, picked);
+      return picked || null;
     })
-  );
-  return withLogos;
+    .catch(() => {
+      logoCache.delete(key);
+      return null;
+    });
+  logoCache.set(key, p);
+  return p;
 }
 
 export const api = {
@@ -240,14 +252,14 @@ export const api = {
     tmdb(`/${type}/${id}`, {
       append_to_response:
         type === 'movie'
-          ? 'images,videos,credits,recommendations,similar,release_dates,external_ids'
-          : 'images,videos,credits,recommendations,similar,content_ratings,external_ids',
+          ? 'images,videos,credits,recommendations,similar,release_dates'
+          : 'images,videos,credits,recommendations,similar,content_ratings',
       include_image_language: 'en,null',
     }),
   season: (id, seasonNumber = 1) => tmdb(`/tv/${id}/season/${seasonNumber}`),
   person: (id) =>
     tmdb(`/person/${id}`, {
-      append_to_response: 'combined_credits,external_ids',
+      append_to_response: 'combined_credits',
     }),
   searchMulti: (query, page = 1, options = {}) =>
     tmdb('/search/multi', { query, page, include_adult: false }, options),

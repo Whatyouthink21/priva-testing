@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Check, ChevronLeft, ChevronRight, Info, Play, Plus } from 'lucide-react';
-import { formatScore, IMG } from '../lib/tmdb';
+import { fetchLogoPath, formatScore, IMG } from '../lib/tmdb';
 import { useLibrary } from '../context/LibraryContext';
 import { useToast } from '../context/ToastContext';
 
@@ -13,38 +13,61 @@ export default function HeroBanner({ slides = [], loading = false }) {
   const [index, setIndex] = useState(0);
   const [prevBackdrop, setPrevBackdrop] = useState(null);
   const [paused, setPaused] = useState(false);
-  const [scrollOffset, setScrollOffset] = useState(0);
+  const [readyLogos, setReadyLogos] = useState({});
   const stripRef = useRef(null);
 
+  const firstSlideKey = slides[0] ? `${slides[0].type}:${slides[0].id}` : '';
+
+  // Reset cleanly whenever section slides change
   useEffect(() => {
     setIndex(0);
     setPrevBackdrop(null);
-    // Preload hero widescreen backdrops for instant 60fps crossfades
-    slides.forEach((s) => {
-      if (s?.backdrop) {
-        const img = new Image();
-        img.src = IMG.backdrop(s.backdrop, 'w1280');
-      }
-    });
-  }, [slides]);
+  }, [firstSlideKey]);
 
-  // Subtle parallax depth matching bingr.one / Hotstar sticky hero
+  const active = slides[index] || slides[0] || null;
+
+  // Preload ONLY the next single slide backdrop + lazily fetch only the active slide's logo
   useEffect(() => {
-    const onScroll = () => {
-      if (window.scrollY < 900) {
-        setScrollOffset(window.scrollY);
-      }
+    if (!active) return undefined;
+    let cancelled = false;
+
+    const nextSlide = slides[(index + 1) % slides.length];
+    if (nextSlide?.backdrop) {
+      const nextImg = new Image();
+      nextImg.src = IMG.backdrop(nextSlide.backdrop, 'w1280');
+    }
+
+    const activeKey = `${active.type}:${active.id}`;
+    if (!readyLogos[activeKey]) {
+      (active.logo ? Promise.resolve(active.logo) : fetchLogoPath(active.type, active.id)).then(
+        (logoPath) => {
+          if (cancelled || !logoPath) return;
+          const url = IMG.logo(logoPath, 'w500');
+          const probe = new Image();
+          probe.onload = () => {
+            if (!cancelled) {
+              setReadyLogos((prev) => ({ ...prev, [activeKey]: url }));
+            }
+          };
+          probe.src = url;
+        }
+      );
+    }
+
+    return () => {
+      cancelled = true;
     };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+  }, [active?.type, active?.id, index, slides]);
 
   const changeSlide = (nextIdx) => {
     setIndex((curr) => {
       if (curr === nextIdx) return curr;
-      if (slides[curr]?.backdrop) {
-        setPrevBackdrop(IMG.backdrop(slides[curr].backdrop, 'w1280'));
-      }
+      const oldSrc = slides[curr]?.backdrop
+        ? IMG.backdrop(slides[curr].backdrop, 'w1280')
+        : slides[curr]?.poster
+          ? IMG.poster(slides[curr].poster, 'w780')
+          : null;
+      if (oldSrc) setPrevBackdrop(oldSrc);
       return nextIdx;
     });
   };
@@ -53,9 +76,10 @@ export default function HeroBanner({ slides = [], loading = false }) {
     if (slides.length <= 1 || paused) return undefined;
     const timer = setInterval(() => {
       setIndex((curr) => {
-        if (slides[curr]?.backdrop) {
-          setPrevBackdrop(IMG.backdrop(slides[curr].backdrop, 'w1280'));
-        }
+        const oldSrc = slides[curr]?.backdrop
+          ? IMG.backdrop(slides[curr].backdrop, 'w1280')
+          : null;
+        if (oldSrc) setPrevBackdrop(oldSrc);
         return (curr + 1) % slides.length;
       });
     }, 7000);
@@ -72,13 +96,13 @@ export default function HeroBanner({ slides = [], loading = false }) {
     strip.scrollTo({ left: Math.max(0, targetLeft), behavior: 'smooth' });
   }, [index]);
 
-  if (loading || !slides.length) {
+  if (loading || !active) {
     return (
       <section className="relative h-[76vh] min-h-[540px] w-full overflow-hidden bg-[#0f1014] lg:h-[88vh]">
         <div className="skeleton h-full w-full opacity-40" />
         <div className="hero-gradient-mask absolute inset-0" />
         <div className="absolute bottom-14 left-4 right-4 max-w-xl space-y-4 lg:left-[108px]">
-          <div className="skeleton h-16 w-72 rounded-xl" />
+          <div className="skeleton h-14 w-72 rounded-xl" />
           <div className="skeleton h-4 w-56 rounded" />
           <div className="skeleton h-16 w-full rounded-lg" />
           <div className="flex gap-3 pt-1">
@@ -90,7 +114,6 @@ export default function HeroBanner({ slides = [], loading = false }) {
     );
   }
 
-  const active = slides[index] || slides[0];
   const saved = isInList(active);
   const resume = getProgress(active.type, active.id);
   const score = formatScore(active.rating);
@@ -98,6 +121,13 @@ export default function HeroBanner({ slides = [], loading = false }) {
     active.type === 'tv'
       ? `/watch/tv/${active.id}/${resume?.season || 1}/${resume?.episode || 1}`
       : `/watch/movie/${active.id}`;
+
+  const activeKey = `${active.type}:${active.id}`;
+  const verifiedLogoUrl = readyLogos[activeKey] || null;
+  const desktopHeroImg =
+    IMG.backdrop(active.backdrop, 'w1280') || IMG.poster(active.poster, 'w780');
+  const mobileHeroImg =
+    IMG.poster(active.poster, 'w500') || IMG.backdrop(active.backdrop, 'w780');
 
   const metaParts = [
     score,
@@ -116,42 +146,41 @@ export default function HeroBanner({ slides = [], loading = false }) {
       onMouseLeave={() => setPaused(false)}
       className="relative h-[78vh] min-h-[540px] max-h-[880px] w-full select-none overflow-hidden bg-[#0f1014] lg:h-[88vh]"
     >
-      {/* Parallax Backdrop Layer with Zero-Flicker Crossfade */}
-      <div
-        style={{
-          transform: `translate3d(0, ${Math.round(scrollOffset * 0.24)}px, 0)`,
-          opacity: Math.max(0.25, 1 - scrollOffset / 760),
-        }}
-        className="absolute inset-0 will-change-transform"
-      >
+      {/* Zero-Flicker Crossfade Backdrop Layer */}
+      <div className="absolute inset-0">
         {prevBackdrop && (
           <img
             src={prevBackdrop}
             alt=""
             aria-hidden="true"
+            decoding="async"
             className="hidden h-full w-full object-cover object-top sm:block"
           />
         )}
 
         <div key={`bg-${active.type}-${active.id}`} className="absolute inset-0 animate-hero-bg">
-          {active.backdrop && (
+          {desktopHeroImg && (
             <img
-              src={IMG.backdrop(active.backdrop, 'w1280')}
+              src={desktopHeroImg}
               alt={active.title}
+              decoding="async"
+              fetchpriority="high"
               className="hidden h-full w-full object-cover object-top sm:block"
             />
           )}
-          {(active.poster || active.backdrop) && (
+          {mobileHeroImg && (
             <img
-              src={IMG.poster(active.poster, 'w780') || IMG.backdrop(active.backdrop, 'w780')}
+              src={mobileHeroImg}
               alt={active.title}
+              decoding="async"
+              fetchpriority="high"
               className="block h-full w-full object-cover object-top sm:hidden"
             />
           )}
         </div>
       </div>
 
-      {/* Hotstar / Bingr Cinematic Edge Vignettes */}
+      {/* Cinematic Edge Vignettes */}
       <div className="hero-gradient-mask pointer-events-none absolute inset-0" />
 
       {/* Left Foreground Content Stack + Bottom-Right Mini Thumbnail Strip */}
@@ -161,14 +190,16 @@ export default function HeroBanner({ slides = [], loading = false }) {
             key={`info-${active.type}-${active.id}`}
             className="max-w-[540px] animate-hero-in"
           >
-            {active.logo ? (
+            {/* Title is ALWAYS rendered instantly; upgrades to clearlogo only once preloaded */}
+            {verifiedLogoUrl ? (
               <img
-                src={IMG.logo(active.logo, 'w500')}
+                src={verifiedLogoUrl}
                 alt={active.title}
-                className="mb-4 max-h-[76px] w-auto max-w-[300px] object-contain object-left drop-shadow-[0_8px_24px_rgba(0,0,0,0.85)] sm:max-h-[104px] sm:max-w-[380px]"
+                decoding="async"
+                className="mb-4 max-h-[76px] w-auto max-w-[300px] object-contain object-left drop-shadow-[0_8px_24px_rgba(0,0,0,0.85)] sm:max-h-[100px] sm:max-w-[380px]"
               />
             ) : (
-              <h1 className="mb-3 font-display text-[32px] font-extrabold leading-[1.06] tracking-[-0.03em] text-white drop-shadow-[0_6px_24px_rgba(0,0,0,0.8)] sm:text-[46px]">
+              <h1 className="mb-3 font-display text-[32px] font-extrabold leading-[1.06] tracking-[-0.03em] text-white drop-shadow-[0_6px_24px_rgba(0,0,0,0.85)] sm:text-[46px]">
                 {active.title}
               </h1>
             )}
@@ -180,7 +211,7 @@ export default function HeroBanner({ slides = [], loading = false }) {
                   <span>{part}</span>
                 </span>
               ))}
-              <span className="ml-1.5 rounded bg-white/[0.14] px-2 py-0.5 text-[11px] font-bold tracking-wide text-white backdrop-blur-sm">
+              <span className="ml-1.5 rounded bg-white/[0.14] px-2 py-0.5 text-[11px] font-bold tracking-wide text-white">
                 {active.badge}
               </span>
             </div>
@@ -235,14 +266,14 @@ export default function HeroBanner({ slides = [], loading = false }) {
             </div>
           </div>
 
-          {/* Hotstar / Bingr Bottom-Right Landscape Thumbnail Strip */}
+          {/* Bottom-Right Landscape Thumbnail Strip */}
           {slides.length > 1 && (
             <div className="group/strip relative hidden max-w-[520px] items-center xl:flex">
               <button
                 type="button"
                 onClick={() => scrollStrip(-1)}
                 aria-label="Previous slides"
-                className="absolute -left-3 z-20 grid h-8 w-8 place-items-center rounded-full bg-black/75 text-white opacity-0 shadow-lg backdrop-blur transition-opacity duration-200 group-hover/strip:opacity-100 hover:bg-black"
+                className="absolute -left-3 z-20 grid h-8 w-8 place-items-center rounded-full bg-black/75 text-white opacity-0 shadow-lg transition-opacity duration-200 group-hover/strip:opacity-100 hover:bg-black"
               >
                 <ChevronLeft size={16} />
               </button>
@@ -253,25 +284,29 @@ export default function HeroBanner({ slides = [], loading = false }) {
               >
                 {slides.map((slide, idx) => {
                   const isCurrent = idx === index;
+                  const thumbSrc =
+                    IMG.backdrop(slide.backdrop, 'w300') || IMG.poster(slide.poster, 'w342');
                   return (
                     <button
                       key={`${slide.type}-${slide.id}`}
                       type="button"
                       onClick={() => changeSlide(idx)}
-                      onMouseEnter={() => changeSlide(idx)}
                       aria-label={`Preview ${slide.title}`}
-                      className={`relative aspect-video w-[86px] shrink-0 overflow-hidden rounded-[6px] transition-all duration-300 ${
+                      title={slide.title}
+                      className={`relative aspect-video w-[86px] shrink-0 overflow-hidden rounded-[6px] bg-[#16181f] transition-transform duration-200 ${
                         isCurrent
                           ? '-translate-y-1 scale-105 opacity-100 ring-2 ring-white shadow-[0_8px_24px_rgba(0,0,0,0.85)]'
-                          : 'opacity-55 hover:opacity-90'
+                          : 'opacity-60 hover:scale-[1.03] hover:opacity-95'
                       }`}
                     >
-                      <img
-                        src={IMG.backdrop(slide.backdrop, 'w300')}
-                        alt={slide.title}
-                        loading="lazy"
-                        className="h-full w-full object-cover"
-                      />
+                      {thumbSrc && (
+                        <img
+                          src={thumbSrc}
+                          alt={slide.title}
+                          decoding="async"
+                          className="h-full w-full object-cover"
+                        />
+                      )}
                       {isCurrent && !paused && (
                         <span className="absolute inset-x-0 bottom-0 h-[2.5px] bg-white/30">
                           <span className="block h-full w-full origin-left bg-white animate-hero-timer" />
@@ -286,7 +321,7 @@ export default function HeroBanner({ slides = [], loading = false }) {
                 type="button"
                 onClick={() => scrollStrip(1)}
                 aria-label="Next slides"
-                className="absolute -right-3 z-20 grid h-8 w-8 place-items-center rounded-full bg-black/75 text-white opacity-0 shadow-lg backdrop-blur transition-opacity duration-200 group-hover/strip:opacity-100 hover:bg-black"
+                className="absolute -right-3 z-20 grid h-8 w-8 place-items-center rounded-full bg-black/75 text-white opacity-0 shadow-lg transition-opacity duration-200 group-hover/strip:opacity-100 hover:bg-black"
               >
                 <ChevronRight size={16} />
               </button>
@@ -301,7 +336,7 @@ export default function HeroBanner({ slides = [], loading = false }) {
                   type="button"
                   onClick={() => changeSlide(idx)}
                   aria-label={`Go to slide ${idx + 1}`}
-                  className={`h-1.5 rounded-full transition-all duration-300 ${
+                  className={`h-1.5 rounded-full transition-all duration-200 ${
                     idx === index ? 'w-6 bg-white' : 'w-1.5 bg-white/35'
                   }`}
                 />

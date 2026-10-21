@@ -28,8 +28,9 @@ import { buildStreamUrl, parsePlayerMessage, SERVERS } from '../lib/sources';
 import { useLibrary } from '../context/LibraryContext';
 import { useToast } from '../context/ToastContext';
 
-export default function Watch({ type = 'movie' }) {
+export default function Watch({ type: propType = 'movie' }) {
   const params = useParams();
+  const type = params.type === 'tv' ? 'tv' : params.type === 'movie' ? 'movie' : propType;
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const {
@@ -427,12 +428,13 @@ export default function Watch({ type = 'movie' }) {
                     <div className="relative aspect-video w-[144px] shrink-0 overflow-hidden rounded-lg bg-[#0f1014]">
                       {(nextEpisodeObj.still_path || detail.backdrop_path) && (
                         <img
-                          src={IMG.backdrop(
+                          src={IMG.still(
                             nextEpisodeObj.still_path || detail.backdrop_path,
-                            'w780'
+                            'w500'
                           )}
                           alt={nextEpisodeObj.name}
-                          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          decoding="async"
+                          className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
                         />
                       )}
                       <span className="absolute inset-0 grid place-items-center bg-black/35 text-white">
@@ -505,10 +507,11 @@ export default function Watch({ type = 'movie' }) {
                       <div className="relative aspect-video w-[140px] shrink-0 overflow-hidden rounded-lg bg-[#0f1014]">
                         {(ep.still_path || detail.backdrop_path) && (
                           <img
-                            src={IMG.backdrop(ep.still_path || detail.backdrop_path, 'w780')}
+                            src={IMG.still(ep.still_path || detail.backdrop_path, 'w500')}
                             alt={ep.name}
                             loading="lazy"
-                            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                            decoding="async"
+                            className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
                           />
                         )}
                         {isPlaying && (

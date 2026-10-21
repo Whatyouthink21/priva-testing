@@ -342,6 +342,7 @@ export function LibraryProvider({ children }) {
       saveWatchProgress,
       removeWatchProgress,
       clearWatchHistory,
+      clearContinueWatching: clearWatchHistory,
       addSearchTerm,
       clearSearchHistory,
       updateSettings,

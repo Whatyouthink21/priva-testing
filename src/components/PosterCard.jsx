@@ -6,7 +6,7 @@ import { formatScore, IMG } from '../lib/tmdb';
 import { useLibrary } from '../context/LibraryContext';
 import { useToast } from '../context/ToastContext';
 
-const POP_WIDTH = 304;
+const POP_WIDTH = 296;
 
 export default function PosterCard({ item, onRemove, className = '' }) {
   const navigate = useNavigate();
@@ -63,11 +63,11 @@ export default function PosterCard({ item, onRemove, className = '' }) {
       );
       const clampedTop = Math.max(
         16,
-        Math.min(window.innerHeight - 330, rect.top - 18)
+        Math.min(window.innerHeight - 320, rect.top - 16)
       );
       setCoords({ left: clampedLeft, top: clampedTop });
       setHovered(true);
-    }, 300);
+    }, 380);
   };
 
   const scheduleClose = () => {
@@ -75,7 +75,7 @@ export default function PosterCard({ item, onRemove, className = '' }) {
     clearTimeout(leaveTimer.current);
     leaveTimer.current = setTimeout(() => {
       setHovered(false);
-    }, 110);
+    }, 90);
   };
 
   const keepOpen = () => {
@@ -92,12 +92,13 @@ export default function PosterCard({ item, onRemove, className = '' }) {
       className={`group relative select-none ${className}`}
     >
       <Link to={detailUrl} className="block">
-        <div className="relative aspect-[2/3] w-full overflow-hidden rounded-[8px] bg-[#16181f] ring-1 ring-white/[0.06] transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.035] group-hover:ring-white/25">
+        <div className="relative aspect-[2/3] w-full overflow-hidden rounded-[8px] bg-[#16181f] ring-1 ring-white/[0.06] transition-transform duration-200 ease-out group-hover:scale-[1.035] group-hover:ring-white/25">
           {item.poster ? (
             <img
-              src={IMG.poster(item.poster, 'w500')}
+              src={IMG.poster(item.poster, 'w342')}
               alt={item.title}
               loading="lazy"
+              decoding="async"
               className="h-full w-full object-cover"
             />
           ) : (
@@ -137,13 +138,12 @@ export default function PosterCard({ item, onRemove, className = '' }) {
           }}
           aria-label={`Remove ${item.title}`}
           title="Remove"
-          className="absolute right-2 top-2 z-30 grid h-7 w-7 place-items-center rounded-full bg-black/75 text-white/80 opacity-0 backdrop-blur transition duration-200 group-hover:opacity-100 hover:bg-red-600 hover:text-white"
+          className="absolute right-2 top-2 z-30 grid h-7 w-7 place-items-center rounded-full bg-black/75 text-white/80 opacity-0 transition-opacity duration-150 group-hover:opacity-100 hover:bg-red-600 hover:text-white"
         >
           <X size={14} />
         </button>
       )}
 
-      {/* Portal-rendered Hotstar / Bingr Hover Pop-Out Card (never clipped by row overflow!) */}
       {hovered &&
         coords &&
         (item.backdrop || item.poster) &&
@@ -162,12 +162,13 @@ export default function PosterCard({ item, onRemove, className = '' }) {
               top: `${coords.top}px`,
               width: `${POP_WIDTH}px`,
             }}
-            className="fixed z-[90] hidden cursor-pointer overflow-hidden rounded-[12px] border border-white/[0.11] bg-[#16181f] shadow-[0_28px_72px_rgba(0,0,0,0.94)] animate-pop-card lg:block"
+            className="fixed z-[90] hidden cursor-pointer overflow-hidden rounded-[12px] border border-white/[0.11] bg-[#16181f] shadow-[0_24px_60px_rgba(0,0,0,0.92)] animate-pop-card lg:block"
           >
             <div className="relative aspect-video w-full overflow-hidden bg-[#0f1014]">
               <img
-                src={IMG.backdrop(item.backdrop, 'w780') || IMG.poster(item.poster, 'w500')}
+                src={IMG.still(item.backdrop, 'w500') || IMG.poster(item.poster, 'w342')}
                 alt={item.title}
+                decoding="async"
                 className="h-full w-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#16181f] via-[#16181f]/20 to-transparent" />
@@ -185,7 +186,7 @@ export default function PosterCard({ item, onRemove, className = '' }) {
                     setHovered(false);
                     navigate(watchUrl);
                   }}
-                  className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-[8px] bg-white text-[12.5px] font-bold text-[#0f1014] transition hover:bg-white/90"
+                  className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-[8px] bg-white text-[12.5px] font-bold text-[#0f1014] transition-colors hover:bg-white/90"
                 >
                   <Play size={13} className="fill-current" />
                   <span>{resume ? 'Resume' : 'Watch Now'}</span>
@@ -204,7 +205,7 @@ export default function PosterCard({ item, onRemove, className = '' }) {
                     );
                   }}
                   aria-label={saved ? 'Remove from My List' : 'Add to My List'}
-                  className="grid h-9 w-9 shrink-0 place-items-center rounded-[8px] bg-white/[0.1] text-white transition hover:bg-white/[0.18]"
+                  className="grid h-9 w-9 shrink-0 place-items-center rounded-[8px] bg-white/[0.1] text-white transition-colors hover:bg-white/[0.18]"
                 >
                   {saved ? <Check size={15} /> : <Plus size={16} />}
                 </button>

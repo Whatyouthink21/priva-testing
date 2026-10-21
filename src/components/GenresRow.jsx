@@ -83,20 +83,23 @@ function GenreCard({ genre }) {
   return (
     <Link
       to={target}
-      className="group relative flex aspect-[16/9] w-full items-center justify-center overflow-hidden rounded-[10px] bg-[#16181f] ring-1 ring-white/[0.08] transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:scale-[1.05] hover:ring-white/30"
+      className="group relative flex aspect-[16/9] w-full items-center justify-center overflow-hidden rounded-[10px] bg-[#16181f] ring-1 ring-white/[0.1] transition-transform duration-200 ease-out hover:scale-[1.04] hover:ring-white/30"
     >
       {genre.backdrop && (
         <img
-          src={IMG.backdrop(genre.backdrop, 'w780')}
-          alt={genre.name}
+          src={IMG.backdrop(genre.backdrop, 'w500')}
+          alt=""
+          aria-hidden="true"
           loading="lazy"
-          className="h-full w-full object-cover opacity-55 transition-transform duration-500 group-hover:scale-110 group-hover:opacity-75"
+          decoding="async"
+          className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-60 transition-transform duration-300 group-hover:scale-110 group-hover:opacity-75"
         />
       )}
       <div
-        className={`absolute inset-0 bg-gradient-to-t ${genre.color} to-black/35`}
+        className={`pointer-events-none absolute inset-0 bg-gradient-to-t ${genre.color} to-black/45`}
       />
-      <span className="relative z-10 font-display text-[17px] font-extrabold tracking-[-0.01em] text-white drop-shadow-[0_4px_14px_rgba(0,0,0,0.9)]">
+      <div className="pointer-events-none absolute inset-0 bg-black/25 transition-opacity duration-200 group-hover:opacity-10" />
+      <span className="relative z-10 px-3 text-center font-display text-[17px] font-extrabold tracking-[-0.01em] text-white drop-shadow-[0_3px_14px_rgba(0,0,0,0.95)] sm:text-[18.5px]">
         {genre.name}
       </span>
     </Link>

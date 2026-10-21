@@ -25,8 +25,8 @@ export default function ContinueCard({ entry, onRemove }) {
       : `/watch/movie/${entry.id}`;
 
   const image =
-    IMG.backdrop(entry.episodeStill || entry.backdrop, 'w780') ||
-    IMG.poster(entry.poster, 'w500');
+    IMG.still(entry.episodeStill || entry.backdrop, 'w500') ||
+    IMG.poster(entry.poster, 'w342');
 
   const subtitle =
     entry.type === 'tv'
@@ -38,12 +38,13 @@ export default function ContinueCard({ entry, onRemove }) {
   return (
     <div className="group relative w-[256px] shrink-0 select-none sm:w-[288px]">
       <Link to={watchUrl} className="block">
-        <div className="relative aspect-video w-full overflow-hidden rounded-[8px] bg-[#16181f] ring-1 ring-white/[0.08] transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.03] group-hover:ring-white/25">
+        <div className="relative aspect-video w-full overflow-hidden rounded-[8px] bg-[#16181f] ring-1 ring-white/[0.08] transition-transform duration-200 ease-out group-hover:scale-[1.03] group-hover:ring-white/25">
           {image ? (
             <img
               src={image}
               alt={entry.title}
               loading="lazy"
+              decoding="async"
               className="h-full w-full object-cover"
             />
           ) : (
@@ -54,12 +55,10 @@ export default function ContinueCard({ entry, onRemove }) {
 
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent" />
 
-          {/* Bottom-left Play button badge */}
           <span className="absolute bottom-3 left-3 grid h-9 w-9 place-items-center rounded-full bg-white text-[#0f1014] shadow-lg transition-transform duration-200 group-hover:scale-110">
             <Play size={15} className="translate-x-[1px] fill-current" />
           </span>
 
-          {/* Bottom watch progress bar */}
           <div className="absolute inset-x-0 bottom-0 h-[3.5px] bg-white/20">
             <div
               className="h-full bg-[#2563eb] transition-all duration-300"
@@ -86,7 +85,7 @@ export default function ContinueCard({ entry, onRemove }) {
           }}
           title="Remove from Continue Watching"
           aria-label={`Remove ${entry.title} from Continue Watching`}
-          className="absolute right-2 top-2 z-20 grid h-7 w-7 place-items-center rounded-full bg-black/75 text-white/75 opacity-0 backdrop-blur transition duration-200 group-hover:opacity-100 hover:bg-red-600 hover:text-white"
+          className="absolute right-2 top-2 z-20 grid h-7 w-7 place-items-center rounded-full bg-black/75 text-white/75 opacity-0 transition-opacity duration-150 group-hover:opacity-100 hover:bg-red-600 hover:text-white"
         >
           <X size={14} />
         </button>
