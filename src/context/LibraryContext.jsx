@@ -21,6 +21,28 @@ const DEFAULT_SETTINGS = {
   subtitles: 'english',
 };
 
+/**
+ * Repair progress values written by older builds: entries whose percent was
+ * stored as a 0–1 fraction (or clamped to 1) get their real percent back
+ * from timestamp/duration when both are known.
+ */
+function normalizeHistory(list) {
+  if (!Array.isArray(list)) return [];
+  return list.map((item) => {
+    if (!item || typeof item !== 'object') return item;
+    const duration = Number(item.duration) || 0;
+    const timestamp = Number(item.timestamp) || 0;
+    let progress = Number(item.progress) || 0;
+    if (duration > 0 && timestamp > 0) {
+      const computed = Math.min(100, (timestamp / duration) * 100);
+      if (computed > progress) progress = computed;
+    } else if (progress > 0 && progress < 1) {
+      progress = progress * 100; // legacy fraction
+    }
+    return { ...item, progress };
+  });
+}
+
 function readLocal() {
   try {
     const raw = localStorage.getItem(STORE_KEY);
@@ -29,7 +51,7 @@ function readLocal() {
     return {
       myList: Array.isArray(parsed.myList) ? parsed.myList : [],
       favorites: Array.isArray(parsed.favorites) ? parsed.favorites : [],
-      history: Array.isArray(parsed.history) ? parsed.history : [],
+      history: normalizeHistory(parsed.history),
       settings: parsed.settings || {},
     };
   } catch {
@@ -55,6 +77,38 @@ export function LibraryProvider({ children }) {
   const [ready, setReady] = useState(false);
   const saveTimer = useRef(null);
   const skipSave = useRef(true);
+  const stateRef = useRef(state);
+  const userRef = useRef(user);
+  const readyRef = useRef(false);
+
+  stateRef.current = state;
+  userRef.current = user;
+  readyRef.current = ready;
+
+  /** Write the library out right now (guests: localStorage, members: Firestore). */
+  const persistNow = useCallback((snapshot) => {
+    const current = snapshot || stateRef.current;
+    const owner = userRef.current;
+    if (owner) {
+      setDoc(
+        doc(db, 'users', owner.uid),
+        {
+          myList: current.myList,
+          favorites: current.favorites,
+          history: current.history,
+          settings: { ...DEFAULT_SETTINGS, ...current.settings },
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      ).catch(() => {});
+    } else {
+      try {
+        localStorage.setItem(STORE_KEY, JSON.stringify(current));
+      } catch {
+        /* storage full / disabled */
+      }
+    }
+  }, []);
 
   // Load the signed-in user's library (or keep the local one for guests).
   useEffect(() => {
@@ -71,7 +125,7 @@ export function LibraryProvider({ children }) {
             setState({
               myList: Array.isArray(data.myList) ? data.myList : [],
               favorites: Array.isArray(data.favorites) ? data.favorites : [],
-              history: Array.isArray(data.history) ? data.history : [],
+              history: normalizeHistory(data.history),
               settings: data.settings || {},
             });
           }
@@ -95,42 +149,48 @@ export function LibraryProvider({ children }) {
     };
   }, [user, authLoading]);
 
-  // Persist: Firestore for members (debounced), localStorage for guests.
+  // Persist on change. Guests write localStorage synchronously (it is cheap
+  // and means a closed tab can never lose the last resume point); member
+  // writes to Firestore stay debounced.
   useEffect(() => {
     if (!ready || skipSave.current) return;
+    if (!user) {
+      persistNow(state);
+      return;
+    }
     if (saveTimer.current) window.clearTimeout(saveTimer.current);
-    saveTimer.current = window.setTimeout(() => {
-      if (user) {
-        setDoc(
-          doc(db, 'users', user.uid),
-          {
-            myList: state.myList,
-            favorites: state.favorites,
-            history: state.history,
-            settings: { ...DEFAULT_SETTINGS, ...state.settings },
-            updatedAt: serverTimestamp(),
-          },
-          { merge: true }
-        ).catch(() => {});
-      } else {
-        try {
-          localStorage.setItem(STORE_KEY, JSON.stringify(state));
-        } catch {
-          /* storage full / disabled */
-        }
-      }
-    }, 450);
+    saveTimer.current = window.setTimeout(() => persistNow(state), 450);
     return () => {
       if (saveTimer.current) window.clearTimeout(saveTimer.current);
     };
-  }, [state, ready, user]);
+  }, [state, ready, user, persistNow]);
+
+  // Flush whatever is pending when the tab is hidden or closed so progress
+  // saved in the last moments of a watch session is never lost.
+  useEffect(() => {
+    const flush = () => {
+      if (!readyRef.current || skipSave.current) return;
+      if (saveTimer.current) window.clearTimeout(saveTimer.current);
+      persistNow();
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') flush();
+    };
+    window.addEventListener('pagehide', flush);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('pagehide', flush);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [persistNow]);
 
   const toggleList = useCallback((item) => {
     const entry = slim(item);
-    let added = false;
+    // Decide from the ref so the return value is correct synchronously
+    // (callers toast "Added"/"Removed" based on it).
+    const added = !stateRef.current.myList.some((x) => keyOf(x) === keyOf(entry));
     setState((prev) => {
       const exists = prev.myList.some((x) => keyOf(x) === keyOf(entry));
-      added = !exists;
       return {
         ...prev,
         myList: exists
@@ -143,10 +203,9 @@ export function LibraryProvider({ children }) {
 
   const toggleFavorite = useCallback((item) => {
     const entry = slim(item);
-    let added = false;
+    const added = !stateRef.current.favorites.some((x) => keyOf(x) === keyOf(entry));
     setState((prev) => {
       const exists = prev.favorites.some((x) => keyOf(x) === keyOf(entry));
-      added = !exists;
       return {
         ...prev,
         favorites: exists
@@ -157,8 +216,29 @@ export function LibraryProvider({ children }) {
     return added;
   }, []);
 
+  /** Remove one title from the watchlist (no-op if it is not there). */
+  const removeFromList = useCallback((item) => {
+    if (!item) return;
+    setState((prev) => ({
+      ...prev,
+      myList: prev.myList.filter((x) => keyOf(x) !== keyOf(item)),
+    }));
+  }, []);
+
+  /** Remove one title from favourites (no-op if it is not there). */
+  const removeFromFavorites = useCallback((item) => {
+    if (!item) return;
+    setState((prev) => ({
+      ...prev,
+      favorites: prev.favorites.filter((x) => keyOf(x) !== keyOf(item)),
+    }));
+  }, []);
+
   const saveProgress = useCallback((item, progress = {}) => {
+    if (!item || !item.title) return;
     const entry = { ...slim(item), ...progress, updatedAt: new Date().toISOString() };
+    // Percent might arrive as a 0–1 fraction from some callers.
+    if (entry.progress > 0 && entry.progress < 1) entry.progress = entry.progress * 100;
     if (!entry.progress || entry.progress < 1) entry.progress = 1;
     if (entry.progress > 97) {
       // Finished — drop it from Continue Watching but keep a light history entry.
@@ -216,7 +296,7 @@ export function LibraryProvider({ children }) {
   const continueWatching = useMemo(
     () =>
       state.history
-        .filter((x) => !x.finished && x.progress > 1 && x.progress < 97)
+        .filter((x) => !x.finished && x.progress >= 1 && x.progress < 97)
         .slice(0, 20),
     [state.history]
   );
@@ -234,6 +314,8 @@ export function LibraryProvider({ children }) {
       continueWatching,
       toggleList,
       toggleFavorite,
+      removeFromList,
+      removeFromFavorites,
       saveProgress,
       removeFromHistory,
       clearHistory,
@@ -249,6 +331,8 @@ export function LibraryProvider({ children }) {
       continueWatching,
       toggleList,
       toggleFavorite,
+      removeFromList,
+      removeFromFavorites,
       saveProgress,
       removeFromHistory,
       clearHistory,

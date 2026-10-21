@@ -3,22 +3,34 @@ import { Link } from 'react-router-dom';
 import { Heart, HeartOff, ListPlus } from 'lucide-react';
 import MediaGrid from '../components/MediaGrid';
 import { useLibrary } from '../context/LibraryContext';
+import { useToast } from '../context/ToastContext';
 import { useReveal } from '../hooks/useReveal';
 import { cx } from '../lib/utils';
 
 export default function MyList() {
-  const { myList, favorites } = useLibrary();
+  const { myList, favorites, removeFromList, removeFromFavorites } = useLibrary();
+  const { toast } = useToast();
   const [tab, setTab] = useState('list');
   useReveal([tab, myList.length, favorites.length]);
 
   const items = tab === 'list' ? myList : favorites;
+
+  const handleRemove = (item) => {
+    if (tab === 'list') {
+      removeFromList(item);
+      toast(`Removed "${item.title}" from your watchlist`, 'info');
+    } else {
+      removeFromFavorites(item);
+      toast(`Removed "${item.title}" from favourites`, 'info');
+    }
+  };
 
   return (
     <div className="container-page pb-14 pt-[104px]">
       <header className="mb-6" data-reveal>
         <h1 className="text-[32px] font-extrabold tracking-[-0.03em] sm:text-[40px]">My List</h1>
         <p className="mt-2 text-[13.5px] text-white/45">
-          Everything you saved for later, synced with your account.
+          Everything you saved for later, synced with your account. Hover a poster and tap × to remove it.
         </p>
       </header>
 

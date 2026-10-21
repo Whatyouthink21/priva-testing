@@ -43,9 +43,11 @@ export default function Home() {
                   </Link>
                   <button
                     onClick={() => removeFromHistory(item)}
-                    className="absolute right-2 top-2 z-20 rounded-full bg-black/70 px-2 py-1 text-[10px] font-medium text-white/70 opacity-0 backdrop-blur transition hover:text-white group-hover:opacity-100"
+                    aria-label={`Remove ${item.title} from continue watching`}
+                    title="Remove from continue watching"
+                    className="absolute left-1.5 top-1.5 z-20 grid h-7 w-7 place-items-center rounded-full bg-black/70 text-white/70 backdrop-blur transition hover:bg-rose-500/90 hover:text-white sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100"
                   >
-                    Remove
+                    <X size={14} />
                   </button>
                 </div>
               ))}

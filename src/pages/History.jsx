@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Clock, History as HistoryIcon, Play, Trash2 } from 'lucide-react';
+import { Clock, History as HistoryIcon, Play, Trash2, X } from 'lucide-react';
 import { IMG } from '../lib/tmdb';
 import { useLibrary } from '../context/LibraryContext';
 import { useToast } from '../context/ToastContext';
@@ -59,6 +59,14 @@ export default function History() {
                     <Play size={19} className="translate-x-[1px] fill-ink-950" />
                   </span>
                 </Link>
+                <button
+                  onClick={() => removeFromHistory(item)}
+                  aria-label={`Remove ${item.title} from continue watching`}
+                  title="Remove from continue watching"
+                  className="absolute left-1.5 top-1.5 z-20 grid h-7 w-7 place-items-center rounded-full bg-black/70 text-white/70 backdrop-blur transition hover:bg-rose-500/90 hover:text-white sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100"
+                >
+                  <X size={14} />
+                </button>
               </div>
             ))}
           </div>

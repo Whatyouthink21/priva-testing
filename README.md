@@ -18,7 +18,7 @@ reviews, numbered playback servers and per-episode resume — all on one domain.
   browser, cast, crew and "more like this".
 - **Critics & media** — replaces the usual audience-review block with a critic
   scorecard (fresh/mixed verdict) plus expandable review cards pulled from TMDB.
-- **Watch** — 16:9 player with three numbered servers, season/episode selector,
+- **Watch** — 16:9 player with four numbered servers plus a dedicated anime server (Sub/Dub), season/episode selector,
   up-next, start-over, download panel and automatic resume-point tracking from
   player `postMessage` events.
 - **Search** — debounced multi-search across titles and people, filters, recent
@@ -116,15 +116,38 @@ service cloud.firestore {
 
 ## Player servers
 
-Three embed providers are wired up in `src/lib/sources.js`. The UI only ever
-labels them **Server 1 / 2 / 3** — provider names are never rendered.
+Four numbered servers plus an anime server are wired up in
+`src/lib/sources.js`. The UI only ever labels them **Server 1 / 2 / 3 / 4** and
+**Anime** — provider names are never rendered.
 
-- Movies: `.../embed/movie/{tmdbId}`
-- TV: `.../embed/tv/{tmdbId}/{season}/{episode}`
+- Servers 1–2 — embed players addressed by TMDB id:
+  `.../embed/movie/{tmdbId}`, `.../embed/tv/{tmdbId}/{season}/{episode}`.
+  Server 1 accepts theme/branding, resume position, episode selector and
+  autoplay flags; server 2 accepts start time and episode selector.
+- Server 3 — the owner's personal Abyss library, resolved per title by
+  `src/lib/abyss.js`. Abyss has no TMDB-id catalog (each uploaded file has its
+  own slug), so the resolver lists the library once via
+  `GET https://api.abyss.to/v1/resources` and matches files by name. Naming
+  uploads with the TMDB id makes matches exact, e.g.
+  `Inception (2010) [27205].mkv`, `The Flash S01E02 [60735].mkv`. Embeds play
+  from the library's custom player domain (`abyssplayer.com`). Configure with
+  `VITE_ABYSS_API_KEY` (see `.env.example`); without a key Server 3 reports
+  itself unavailable and the player falls back to the other servers.
+- Server 4 — a full watch page embedded as-is
+  (`bingr.one/watch/movie/{tmdbId}`, `.../watch/tv/{tmdbId}/{season}/{episode}`);
+  upstream offers no clean embed endpoint.
+- Anime — shown first, and selected automatically, on Japanese animation
+  titles. TMDB ids are mapped to AniList/MAL ids by `src/lib/anime.js`
+  (AniList search, cached locally), then played via
+  `megaplay.buzz/stream/ani/{anilistId}/{episode}/{sub|dub}` with a Sub/Dub
+  toggle. Unmapped titles fall back to the numbered servers.
 
-Server 1 accepts theme/branding, resume position, episode selector and autoplay
-flags; server 2 accepts start time and episode selector; server 3 accepts start
-time. Progress events are parsed from all three and written to the library.
+Continue Watching no longer depends on a single player's cooperation: a title
+enters history as soon as its watch page opens, player `postMessage` progress
+is parsed in all common dialects (fractions normalised to percent, nested
+payloads unwrapped), a watch-time estimator covers silent players, and guest
+saves hit `localStorage` synchronously plus on `pagehide`, so closing the tab
+can't lose the last resume point.
 
 Downloads open `dl.vidsrc.party` and `vidvault.to` in a new tab, where quality is
 chosen.
