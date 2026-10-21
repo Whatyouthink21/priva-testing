@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="privaGrad" x1="6" y1="6" x2="58" y2="58" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="50%" stop-color="#2563eb"/>
+      <stop offset="100%" stop-color="#4f46e5"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="56" height="56" rx="16" fill="url(#privaGrad)"/>
+  <path d="M24 19.5C24 17.9 25.75 16.92 27.12 17.75L44.6 28.25C45.92 29.05 45.92 30.95 44.6 31.75L27.12 42.25C25.75 43.08 24 42.1 24 40.5V19.5Z" fill="#ffffff"/>
+  <path d="M24 34L35.5 40.9L27.12 45.95C25.75 46.78 24 45.8 24 44.2V34Z" fill="#ffffff" fill-opacity="0.55"/>
+</svg>

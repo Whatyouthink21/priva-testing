@@ -1,0 +1,195 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+    --sidebar-w: 96px;
+    --bg-canvas: #0f1014;
+    --bg-surface: #16181f;
+    --bg-elevated: #1b1e29;
+    --text-primary: #e1e6f0;
+    --text-muted: #8f98b2;
+  }
+
+  * {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html {
+    background-color: #0f1014;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: #0f1014;
+    color: #e1e6f0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+
+  ::-webkit-scrollbar {
+    width: 7px;
+    height: 7px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0f1014;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.14);
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.25);
+  }
+}
+
+@layer components {
+  /* Hotstar / Bingr signature left sidebar hover scrim */
+  .rail-scrim {
+    background: linear-gradient(
+      90deg,
+      rgba(15, 16, 20, 0.99) 0%,
+      rgba(15, 16, 20, 0.95) 36%,
+      rgba(15, 16, 20, 0.72) 66%,
+      rgba(15, 16, 20, 0) 100%
+    );
+  }
+
+  .rail-passive-scrim {
+    background: linear-gradient(
+      90deg,
+      rgba(15, 16, 20, 0.78) 0%,
+      rgba(15, 16, 20, 0.35) 55%,
+      rgba(15, 16, 20, 0) 100%
+    );
+  }
+
+  /* Cinematic hero edge vignettes matching bingr.one / Hotstar X */
+  .hero-gradient-mask {
+    background:
+      linear-gradient(
+        90deg,
+        #0f1014 0%,
+        rgba(15, 16, 20, 0.92) 18%,
+        rgba(15, 16, 20, 0.58) 42%,
+        rgba(15, 16, 20, 0.12) 68%,
+        rgba(15, 16, 20, 0.04) 100%
+      ),
+      linear-gradient(
+        0deg,
+        #0f1014 0%,
+        rgba(15, 16, 20, 0.94) 10%,
+        rgba(15, 16, 20, 0.52) 28%,
+        rgba(15, 16, 20, 0) 58%
+      ),
+      linear-gradient(
+        180deg,
+        rgba(15, 16, 20, 0.52) 0%,
+        rgba(15, 16, 20, 0) 22%
+      );
+  }
+
+  /* Hotstar signature electric blue primary button */
+  .btn-priva-blue {
+    background: linear-gradient(93.87deg, #095ae6 0%, #062794 100%);
+    box-shadow: 0 8px 28px -6px rgba(9, 90, 230, 0.55);
+    transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+      filter 0.22s ease;
+  }
+  .btn-priva-blue:hover {
+    transform: scale(1.025);
+    filter: brightness(1.08);
+    box-shadow: 0 12px 34px -6px rgba(9, 90, 230, 0.72);
+  }
+  .btn-priva-blue:active {
+    transform: scale(0.98);
+  }
+
+  /* Hero translucent / solid Watch CTA */
+  .btn-hero-watch {
+    background: rgba(255, 255, 255, 0.94);
+    color: #0f1014;
+    transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+      background-color 0.2s ease,
+      box-shadow 0.22s ease;
+  }
+  .btn-hero-watch:hover {
+    background: #ffffff;
+    transform: scale(1.025);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  }
+  .btn-hero-watch:active {
+    transform: scale(0.98);
+  }
+
+  .btn-hero-glass {
+    background: rgba(255, 255, 255, 0.14);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    color: #ffffff;
+    transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+      background-color 0.2s ease;
+  }
+  .btn-hero-glass:hover {
+    background: rgba(255, 255, 255, 0.23);
+    transform: scale(1.03);
+  }
+  .btn-hero-glass:active {
+    transform: scale(0.97);
+  }
+
+  /* Hotstar / Bingr giant Top-10 ranked numeral */
+  .rank-glyph {
+    font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+    font-weight: 900;
+    line-height: 0.82;
+    letter-spacing: -0.06em;
+    background: linear-gradient(180deg, #ffffff 12%, rgba(225, 230, 240, 0.32) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.85));
+    user-select: none;
+  }
+
+  /* Shimmer loading skeleton */
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    background: #16181f;
+  }
+  .skeleton::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.055) 50%,
+      transparent 100%
+    );
+    animation: shimmer 1.6s ease-in-out infinite;
+  }
+
+  /* My Space ambient radial glow */
+  .myspace-glow {
+    background:
+      radial-gradient(ellipse 75% 380px at 50% 0%, rgba(12, 58, 158, 0.36) 0%, rgba(15, 16, 20, 0) 72%),
+      linear-gradient(180deg, #0b1329 0%, #0f1014 340px);
+  }
+}
+
+@layer utilities {
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}

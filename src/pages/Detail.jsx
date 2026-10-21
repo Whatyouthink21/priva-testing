@@ -1,0 +1,609 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import {
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Film,
+  Play,
+  Plus,
+  Search,
+  User,
+} from 'lucide-react';
+import PosterCard from '../components/PosterCard';
+import DownloadModal from '../components/DownloadModal';
+import TrailerModal from '../components/TrailerModal';
+import {
+  api,
+  extractCertification,
+  formatRuntime,
+  formatScore,
+  IMG,
+  isAnimeItem,
+  normalizeItem,
+  pickBestLogo,
+  titleOf,
+  yearOf,
+} from '../lib/tmdb';
+import { useLibrary } from '../context/LibraryContext';
+import { useToast } from '../context/ToastContext';
+
+export default function Detail({ type = 'movie' }) {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const { isInList, toggleMyList, getProgress } = useLibrary();
+  const { toast } = useToast();
+
+  const [detail, setDetail] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedSeason, setSelectedSeason] = useState(1);
+  const [episodes, setEpisodes] = useState([]);
+  const [loadingEpisodes, setLoadingEpisodes] = useState(false);
+  const [epQuery, setEpQuery] = useState('');
+  const [downloadModal, setDownloadModal] = useState({ open: false, season: 1, episode: 1 });
+  const [trailerOpen, setTrailerOpen] = useState(false);
+
+  const castScrollerRef = useRef(null);
+
+  const numericId = useMemo(() => {
+    const m = String(id || '').match(/\d+/);
+    return m ? Number(m[0]) : Number(id);
+  }, [id]);
+
+  const savedProgress = getProgress(type, numericId);
+
+  useEffect(() => {
+    if (!numericId) return undefined;
+    let cancelled = false;
+    setLoading(true);
+    setEpisodes([]);
+    setEpQuery('');
+
+    api
+      .fullDetail(type, numericId)
+      .then((data) => {
+        if (cancelled) return;
+        setDetail(data);
+        const name = titleOf(data);
+        document.title = `${name} · Priva`;
+        if (type === 'tv') {
+          const validSeasons = (data.seasons || []).filter((s) => s.season_number > 0);
+          const initialSeason =
+            savedProgress?.season || validSeasons[0]?.season_number || 1;
+          setSelectedSeason(initialSeason);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setDetail(null);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [type, numericId]);
+
+  useEffect(() => {
+    if (type !== 'tv' || !numericId || !detail) return undefined;
+    let cancelled = false;
+    setLoadingEpisodes(true);
+
+    api
+      .season(numericId, selectedSeason)
+      .then((res) => {
+        if (!cancelled) setEpisodes(res.episodes || []);
+      })
+      .catch(() => {
+        if (!cancelled) setEpisodes([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingEpisodes(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [type, numericId, selectedSeason, detail]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0f1014]">
+        <div className="relative h-[76vh] min-h-[520px] w-full">
+          <div className="skeleton h-full w-full opacity-40" />
+          <div className="hero-gradient-mask absolute inset-0" />
+          <div className="absolute bottom-14 left-4 max-w-xl space-y-4 lg:left-[108px]">
+            <div className="skeleton h-16 w-72 rounded-xl" />
+            <div className="skeleton h-4 w-64 rounded" />
+            <div className="skeleton h-20 w-full rounded-lg" />
+            <div className="flex gap-3">
+              <div className="skeleton h-12 w-52 rounded-[10px]" />
+              <div className="skeleton h-12 w-12 rounded-[10px]" />
+              <div className="skeleton h-12 w-12 rounded-[10px]" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!detail) {
+    return (
+      <div className="flex min-h-[75vh] flex-col items-center justify-center px-6 text-center lg:pl-[108px]">
+        <h1 className="font-display text-[26px] font-bold text-white">Title not found</h1>
+        <p className="mt-2 text-[14px] text-[#8f98b2]">
+          This movie or series may have moved or is temporarily unavailable.
+        </p>
+        <Link
+          to="/home"
+          className="btn-priva-blue mt-6 rounded-xl px-6 py-3 text-[14px] font-bold text-white"
+        >
+          Back to Home
+        </Link>
+      </div>
+    );
+  }
+
+  const title = titleOf(detail);
+  const year = yearOf(detail);
+  const score = formatScore(detail.vote_average);
+  const cert = extractCertification(detail, type);
+  const logoPath = pickBestLogo(detail.images);
+  const anime = isAnimeItem(detail);
+  const normalizedSelf = normalizeItem(detail, type);
+  const saved = isInList(normalizedSelf);
+
+  const validSeasons = (detail.seasons || []).filter((s) => s.season_number > 0);
+  const durationMeta =
+    type === 'movie'
+      ? formatRuntime(detail.runtime)
+      : validSeasons.length > 1
+        ? `${validSeasons.length} Seasons`
+        : detail.number_of_episodes
+          ? `${detail.number_of_episodes} Episodes`
+          : '1 Season';
+
+  const metaItems = [score, year, cert, durationMeta].filter(Boolean);
+
+  const trailer = (detail.videos?.results || []).find(
+    (v) => v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser')
+  );
+
+  const cast = (detail.credits?.cast || []).slice(0, 20);
+
+  const related = (() => {
+    const seen = new Set([numericId]);
+    const list = [];
+    for (const r of [
+      ...(detail.recommendations?.results || []),
+      ...(detail.similar?.results || []),
+    ]) {
+      if (!r?.id || seen.has(r.id) || (!r.poster_path && !r.backdrop_path)) continue;
+      seen.add(r.id);
+      list.push(normalizeItem(r, type));
+      if (list.length >= 20) break;
+    }
+    return list;
+  })();
+
+  const filteredEpisodes = epQuery.trim()
+    ? episodes.filter(
+        (ep) =>
+          String(ep.episode_number).includes(epQuery.trim()) ||
+          (ep.name || '').toLowerCase().includes(epQuery.trim().toLowerCase())
+      )
+    : episodes;
+
+  const primaryWatchUrl =
+    type === 'tv'
+      ? `/watch/tv/${numericId}/${savedProgress?.season || selectedSeason || 1}/${
+          savedProgress?.episode || 1
+        }`
+      : `/watch/movie/${numericId}`;
+
+  return (
+    <div className="min-h-screen bg-[#0f1014] pb-12">
+      {/* Full-Bleed Sticky Backdrop Hero matching bingr.one/movie/:id & /tv/:id */}
+      <section className="relative min-h-[76vh] w-full overflow-hidden lg:min-h-[84vh]">
+        <div className="absolute inset-0">
+          {detail.backdrop_path ? (
+            <img
+              src={IMG.original(detail.backdrop_path)}
+              alt={title}
+              className="h-full w-full object-cover object-top"
+            />
+          ) : (
+            detail.poster_path && (
+              <img
+                src={IMG.poster(detail.poster_path, 'w780')}
+                alt={title}
+                className="h-full w-full object-cover opacity-50 blur-sm"
+              />
+            )
+          )}
+        </div>
+
+        <div className="hero-gradient-mask pointer-events-none absolute inset-0" />
+
+        <div className="relative z-10 flex min-h-[76vh] flex-col justify-end px-4 pb-10 pt-24 sm:px-8 lg:min-h-[84vh] lg:pb-12 lg:pl-[108px] lg:pr-12">
+          <div className="max-w-[600px] animate-hero-in">
+            {logoPath ? (
+              <img
+                src={IMG.logo(logoPath, 'w500')}
+                alt={title}
+                className="mb-5 max-h-[88px] w-auto max-w-[330px] object-contain object-left drop-shadow-[0_10px_28px_rgba(0,0,0,0.85)] sm:max-h-[116px] sm:max-w-[420px]"
+              />
+            ) : (
+              <h1 className="mb-4 font-display text-[34px] font-extrabold leading-[1.06] tracking-[-0.03em] text-white sm:text-[48px]">
+                {title}
+              </h1>
+            )}
+
+            {/* Bullet-separated metadata line matching bingr.one: 8.0 • 2021 • U/A 16+ • 6 Seasons */}
+            <div className="mb-3.5 flex flex-wrap items-center gap-2 text-[14px] font-bold text-[#e1e6f0]">
+              {metaItems.map((item, idx) => (
+                <span key={`${item}-${idx}`} className="inline-flex items-center gap-2">
+                  {idx > 0 && <span className="text-white/40">•</span>}
+                  <span
+                    className={
+                      item === cert
+                        ? 'rounded bg-white/[0.14] px-2 py-0.5 text-[12px] font-bold text-white'
+                        : ''
+                    }
+                  >
+                    {item}
+                  </span>
+                </span>
+              ))}
+            </div>
+
+            {detail.overview && (
+              <p className="mb-4 text-[14px] leading-[1.65] text-[#c4ccdf] sm:text-[15px]">
+                {detail.overview}
+              </p>
+            )}
+
+            {/* Pipe-separated Clickable Genres matching bingr.one: Action | Fantasy */}
+            {detail.genres?.length > 0 && (
+              <div className="mb-6 flex flex-wrap items-center gap-2 text-[13.5px] font-semibold text-white">
+                {detail.genres.map((g, idx) => (
+                  <span key={g.id} className="inline-flex items-center gap-2">
+                    {idx > 0 && <span className="text-white/30">|</span>}
+                    <Link
+                      to={`/discover/${type}?genre=${g.id}&label=${encodeURIComponent(g.name)}`}
+                      className="transition hover:text-blue-400"
+                    >
+                      {g.name}
+                    </Link>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Watch Now + Watchlist + Trailer + Download Actions */}
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={() => navigate(primaryWatchUrl)}
+                className="btn-hero-watch inline-flex h-[50px] min-w-[210px] items-center justify-center gap-2.5 rounded-[10px] px-8 text-[15.5px] font-extrabold"
+              >
+                <Play size={18} className="fill-current" />
+                <span>
+                  {savedProgress
+                    ? type === 'tv'
+                      ? `Continue S${savedProgress.season} E${savedProgress.episode}`
+                      : 'Resume Watching'
+                    : 'Watch Now'}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const added = toggleMyList(normalizedSelf);
+                  toast(
+                    added ? `Added "${title}" to My List` : `Removed "${title}" from My List`,
+                    added ? 'success' : 'info'
+                  );
+                }}
+                aria-label={saved ? 'Remove from My List' : 'Add to My List'}
+                title={saved ? 'In My List' : 'Add to My List'}
+                className="btn-hero-glass grid h-[50px] w-[50px] place-items-center rounded-[10px]"
+              >
+                {saved ? <Check size={21} strokeWidth={2.5} /> : <Plus size={22} strokeWidth={2.3} />}
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setDownloadModal({
+                    open: true,
+                    season: savedProgress?.season || selectedSeason || 1,
+                    episode: savedProgress?.episode || 1,
+                  })
+                }
+                className="btn-hero-glass inline-flex h-[50px] items-center justify-center gap-2 rounded-[10px] px-5 text-[14px] font-semibold"
+              >
+                <Download size={17} />
+                <span>Download</span>
+              </button>
+
+              {trailer && (
+                <button
+                  type="button"
+                  onClick={() => setTrailerOpen(true)}
+                  className="btn-hero-glass inline-flex h-[50px] items-center justify-center gap-2 rounded-[10px] px-5 text-[14px] font-semibold"
+                >
+                  <Film size={17} />
+                  <span>Trailer</span>
+                </button>
+              )}
+
+              <span className="rounded-lg bg-white/[0.08] px-3 py-1.5 text-[12px] font-bold uppercase tracking-wider text-white/75">
+                {anime ? 'Anime' : type === 'tv' ? 'Series' : 'Movie'}
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ================================================================== */}
+      {/* EPISODES LIST (TV & Anime) matching bingr.one/tv/:id               */}
+      {/* ================================================================== */}
+      {type === 'tv' && (
+        <section className="px-4 pt-6 sm:px-8 lg:pl-[108px] lg:pr-12">
+          <div className="mb-4 flex flex-col justify-between gap-4 border-b border-white/[0.08] pb-4 sm:flex-row sm:items-center">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="mr-3 font-display text-[21px] font-bold text-white">Episodes</h2>
+              <div className="no-scrollbar flex max-w-full items-center gap-1.5 overflow-x-auto">
+                {validSeasons.map((s) => (
+                  <button
+                    key={s.id || s.season_number}
+                    type="button"
+                    onClick={() => setSelectedSeason(s.season_number)}
+                    className={`shrink-0 rounded-lg px-3.5 py-1.5 text-[13px] font-semibold transition ${
+                      selectedSeason === s.season_number
+                        ? 'bg-white text-[#0f1014]'
+                        : 'bg-[#16181f] text-[#8f98b2] hover:text-white'
+                    }`}
+                  >
+                    Season {s.season_number}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {episodes.length > 6 && (
+              <div className="relative w-full sm:w-60">
+                <Search
+                  size={15}
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8f98b2]"
+                />
+                <input
+                  type="text"
+                  value={epQuery}
+                  onChange={(e) => setEpQuery(e.target.value)}
+                  placeholder="Find episode..."
+                  className="h-9 w-full rounded-lg border border-white/[0.08] bg-[#16181f] pl-9 pr-3 text-[13px] text-white placeholder-[#6b738b] focus:border-blue-500 focus:outline-none"
+                />
+              </div>
+            )}
+          </div>
+
+          {loadingEpisodes ? (
+            <div className="space-y-3">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="skeleton h-28 w-full rounded-xl" />
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredEpisodes.map((ep) => {
+                const epWatchUrl = `/watch/tv/${numericId}/${selectedSeason}/${ep.episode_number}`;
+                const isActiveEp =
+                  savedProgress?.season === selectedSeason &&
+                  savedProgress?.episode === ep.episode_number;
+
+                return (
+                  <div
+                    key={ep.id || ep.episode_number}
+                    className={`group flex flex-col gap-4 rounded-xl p-3 transition duration-200 sm:flex-row sm:items-center ${
+                      isActiveEp
+                        ? 'bg-[#191d2b] ring-1 ring-blue-500/40'
+                        : 'hover:bg-[#16181f]'
+                    }`}
+                  >
+                    {/* 16:9 Episode Still Thumbnail */}
+                    <Link
+                      to={epWatchUrl}
+                      className="relative aspect-video w-full shrink-0 overflow-hidden rounded-[8px] bg-[#16181f] sm:w-[236px]"
+                    >
+                      {ep.still_path || detail.backdrop_path ? (
+                        <img
+                          src={IMG.backdrop(ep.still_path || detail.backdrop_path, 'w780')}
+                          alt={ep.name}
+                          loading="lazy"
+                          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        />
+                      ) : (
+                        <div className="grid h-full w-full place-items-center text-white/30">
+                          <Play size={22} />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent" />
+                      <span className="absolute bottom-2.5 left-3 grid h-8 w-8 place-items-center rounded-full bg-black/70 text-white backdrop-blur transition group-hover:bg-white group-hover:text-[#0f1014]">
+                        <Play size={13} className="translate-x-[1px] fill-current" />
+                      </span>
+                      {ep.runtime > 0 && (
+                        <span className="absolute bottom-2.5 right-2.5 rounded bg-black/75 px-1.5 py-0.5 text-[11px] font-semibold text-white/90">
+                          {ep.runtime}m
+                        </span>
+                      )}
+                      {isActiveEp && (
+                        <div className="absolute inset-x-0 bottom-0 h-1 bg-white/25">
+                          <div
+                            className="h-full bg-blue-500"
+                            style={{ width: `${savedProgress.progress}%` }}
+                          />
+                        </div>
+                      )}
+                    </Link>
+
+                    {/* Episode Title, Meta & Overview */}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <Link to={epWatchUrl} className="group/title min-w-0">
+                          <h3 className="text-[15.5px] font-bold text-white group-hover/title:text-blue-400">
+                            {ep.episode_number}. {ep.name || `Episode ${ep.episode_number}`}
+                          </h3>
+                          <p className="mt-0.5 text-[12px] font-semibold text-[#8f98b2]">
+                            S{selectedSeason} E{ep.episode_number}
+                            {ep.air_date ? ` · ${ep.air_date}` : ''}
+                            {ep.runtime ? ` · ${ep.runtime}m` : ''}
+                          </p>
+                        </Link>
+
+                        <div className="flex shrink-0 items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setDownloadModal({
+                                open: true,
+                                season: selectedSeason,
+                                episode: ep.episode_number,
+                              })
+                            }
+                            title={`Download S${selectedSeason} E${ep.episode_number}`}
+                            aria-label={`Download Episode ${ep.episode_number}`}
+                            className="grid h-9 w-9 place-items-center rounded-lg bg-white/[0.06] text-[#cbd5e1] transition hover:bg-white/[0.14] hover:text-white"
+                          >
+                            <Download size={15} />
+                          </button>
+                          <Link
+                            to={epWatchUrl}
+                            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-white/[0.1] px-3.5 text-[12.5px] font-bold text-white transition hover:bg-white hover:text-[#0f1014]"
+                          >
+                            <Play size={12} className="fill-current" />
+                            <span>Play</span>
+                          </Link>
+                        </div>
+                      </div>
+
+                      {ep.overview && (
+                        <p className="mt-2 line-clamp-2 text-[13px] leading-relaxed text-[#9aa3bc]">
+                          {ep.overview}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* ================================================================== */}
+      {/* ACTORS ROW matching bingr.one/movie/:id                            */}
+      {/* ================================================================== */}
+      {cast.length > 0 && (
+        <section className="group/cast relative pt-10">
+          <div className="mb-4 flex items-center justify-between px-4 sm:px-8 lg:pl-[108px] lg:pr-12">
+            <h2 className="font-display text-[20px] font-bold text-white">Actors</h2>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() =>
+                  castScrollerRef.current?.scrollBy({ left: -420, behavior: 'smooth' })
+                }
+                aria-label="Scroll actors left"
+                className="grid h-8 w-8 place-items-center rounded-full bg-white/[0.07] text-white/80 hover:bg-white/[0.15]"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  castScrollerRef.current?.scrollBy({ left: 420, behavior: 'smooth' })
+                }
+                aria-label="Scroll actors right"
+                className="grid h-8 w-8 place-items-center rounded-full bg-white/[0.07] text-white/80 hover:bg-white/[0.15]"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          </div>
+
+          <div
+            ref={castScrollerRef}
+            className="no-scrollbar flex gap-4 overflow-x-auto px-4 pb-2 sm:px-8 lg:pl-[108px] lg:pr-12"
+          >
+            {cast.map((person) => (
+              <Link
+                key={`${person.id}-${person.cast_id || person.credit_id}`}
+                to={`/person/${person.id}`}
+                className="group w-[118px] shrink-0 text-center sm:w-[132px]"
+              >
+                <div className="mx-auto aspect-square w-[104px] overflow-hidden rounded-full bg-[#16181f] ring-1 ring-white/[0.1] transition-transform duration-300 group-hover:scale-105 group-hover:ring-white/30 sm:w-[116px]">
+                  {person.profile_path ? (
+                    <img
+                      src={IMG.profile(person.profile_path)}
+                      alt={person.name}
+                      loading="lazy"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="grid h-full w-full place-items-center text-[#8f98b2]">
+                      <User size={28} />
+                    </div>
+                  )}
+                </div>
+                <p className="mt-2.5 truncate text-[13px] font-semibold text-white group-hover:text-blue-400">
+                  {person.name}
+                </p>
+                {person.character && (
+                  <p className="truncate text-[11.5px] text-[#8f98b2]">{person.character}</p>
+                )}
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ================================================================== */}
+      {/* MORE LIKE THIS SECTION                                             */}
+      {/* ================================================================== */}
+      {related.length > 0 && (
+        <section className="px-4 pt-10 sm:px-8 lg:pl-[108px] lg:pr-12">
+          <h2 className="mb-4 font-display text-[20px] font-bold text-white">More Like This</h2>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7">
+            {related.map((item) => (
+              <PosterCard key={`${item.type}-${item.id}`} item={item} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      <DownloadModal
+        open={downloadModal.open}
+        onClose={() => setDownloadModal((s) => ({ ...s, open: false }))}
+        type={type}
+        id={numericId}
+        title={title}
+        season={downloadModal.season}
+        episode={downloadModal.episode}
+        seasons={validSeasons}
+        episodeCount={episodes.length || 24}
+      />
+
+      <TrailerModal
+        open={trailerOpen}
+        onClose={() => setTrailerOpen(false)}
+        youtubeKey={trailer?.key}
+        title={title}
+      />
+    </div>
+  );
+}
