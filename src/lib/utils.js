@@ -40,3 +40,24 @@ export function secondsToClock(seconds) {
 export function plural(count, word) {
   return `${count} ${word}${count === 1 ? '' : 's'}`;
 }
+
+export function slugify(str = '') {
+  return String(str)
+    .toLowerCase()
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 64);
+}
+
+export function withSlug(id, title) {
+  const slug = slugify(title);
+  return slug ? `${id}-${slug}` : String(id);
+}
+
+export function parseId(param = '') {
+  const raw = String(param).split('-')[0];
+  return raw;
+}

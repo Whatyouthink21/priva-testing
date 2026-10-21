@@ -23,7 +23,7 @@ export default function Settings() {
   useReveal();
 
   return (
-    <div className="container-page max-w-4xl pb-16 pt-[104px]">
+    <div className="container-page max-w-4xl pb-16 pt-6">
       <header className="mb-8" data-reveal>
         <h1 className="text-[32px] font-extrabold tracking-[-0.03em] sm:text-[40px]">Settings</h1>
         <p className="mt-2 text-[13.5px] text-white/45">

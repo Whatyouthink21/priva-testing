@@ -26,7 +26,7 @@ export default function MyList() {
   };
 
   return (
-    <div className="container-page pb-14 pt-[104px]">
+    <div className="container-page pb-14 pt-6">
       <header className="mb-6" data-reveal>
         <h1 className="text-[32px] font-extrabold tracking-[-0.03em] sm:text-[40px]">My List</h1>
         <p className="mt-2 text-[13.5px] text-white/45">

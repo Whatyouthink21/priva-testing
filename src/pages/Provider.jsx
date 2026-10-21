@@ -85,7 +85,7 @@ export default function Provider() {
   const label = useMemo(() => name, [name]);
 
   return (
-    <div className="container-page pb-12 pt-[104px]">
+    <div className="container-page pb-12 pt-6">
       <header className="mb-6 flex flex-wrap items-center gap-4" data-reveal>
         <div className="grid h-16 w-24 place-items-center rounded-xl border border-white/10 bg-white/[0.05]">
           {logo ? (

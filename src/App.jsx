@@ -30,7 +30,7 @@ export default function App() {
   }, [location.pathname, location.hash]);
 
   return (
-    <div className="flex min-h-screen flex-col bg-ink-950">
+    <div className="flex min-h-screen flex-col bg-[#09090b]">
       <Navbar />
       <main className="flex-1">
         <ErrorBoundary key={location.pathname}>
@@ -43,8 +43,12 @@ export default function App() {
 
           <Route path="/movie/:id" element={<Detail type="movie" />} />
           <Route path="/tv/:id" element={<Detail type="tv" />} />
+
+          {/* Watch routes - support slug in id and bingr-style season/episode path */}
           <Route path="/watch/movie/:id" element={<Watch type="movie" />} />
           <Route path="/watch/tv/:id" element={<Watch type="tv" />} />
+          <Route path="/watch/tv/:id/:season/:episode" element={<Watch type="tv" />} />
+
           <Route path="/person/:id" element={<Person />} />
 
           <Route path="/search" element={<Search />} />

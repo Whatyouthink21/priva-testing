@@ -70,7 +70,7 @@ export default function Person() {
   const shortBio = bio.length > 700 ? `${bio.slice(0, 700)}…` : bio;
 
   return (
-    <div className="container-page pb-16 pt-[104px]">
+    <div className="container-page pb-16 pt-6">
       <div className="flex flex-col gap-7 sm:flex-row">
         <div className="w-[170px] shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-ink-800 shadow-card sm:w-[230px]">
           {person.profile_path ? (
