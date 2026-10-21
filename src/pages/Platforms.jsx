@@ -30,7 +30,7 @@ export default function Platforms() {
   }, [providers]);
 
   return (
-    <div className="container-page pb-16 pt-[104px]">
+    <div className="container-page pb-16 pt-6">
       <header className="mb-7 flex flex-wrap items-end justify-between gap-4" data-reveal>
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-400">

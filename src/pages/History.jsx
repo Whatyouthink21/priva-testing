@@ -16,7 +16,7 @@ export default function History() {
   const finished = history.filter((h) => h.finished || h.progress >= 97);
 
   return (
-    <div className="container-page pb-14 pt-[104px]">
+    <div className="container-page pb-14 pt-6">
       <header className="mb-6 flex flex-wrap items-end justify-between gap-4" data-reveal>
         <div>
           <h1 className="text-[32px] font-extrabold tracking-[-0.03em] sm:text-[40px]">

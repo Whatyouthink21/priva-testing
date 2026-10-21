@@ -5,12 +5,12 @@ export default {
     extend: {
       colors: {
         ink: {
-          950: '#07070a',
-          900: '#0b0b10',
-          850: '#101017',
-          800: '#15151d',
-          700: '#1d1d27',
-          600: '#272733',
+          950: '#09090b',
+          900: '#111113',
+          850: '#18181b',
+          800: '#1e1e22',
+          700: '#27272a',
+          600: '#3f3f46',
         },
         // Driven by CSS variables so a single page can re-tint itself
         // (see the adaptive palette on movie/TV detail pages).

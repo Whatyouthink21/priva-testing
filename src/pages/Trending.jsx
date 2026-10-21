@@ -57,19 +57,19 @@ export default function Trending() {
   }, [tab]);
 
   return (
-    <div className="container-page pb-12 pt-[104px]">
+    <div className="container-page pb-12 pt-6">
       <header className="mb-7" data-reveal>
-        <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-400">
+        <p className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest text-white/30">
           <Flame size={13} /> Live rankings
         </p>
-        <h1 className="text-[34px] font-extrabold tracking-[-0.03em] sm:text-[44px]">{heading}</h1>
-        <p className="mt-2 max-w-xl text-[13.5px] leading-relaxed text-white/45">
+        <h1 className="text-[28px] font-black tracking-tight sm:text-[32px]">{heading}</h1>
+        <p className="mt-1 max-w-xl text-sm text-white/40">
           What the world is watching right now, refreshed throughout the day from TMDB.
         </p>
       </header>
 
       <div
-        className="mb-6 flex flex-wrap items-center gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.025] px-3 py-3 sm:px-4"
+        className="mb-6 flex flex-wrap items-center gap-3 rounded-2xl border border-white/5 bg-[#18181b] px-3 py-3 sm:px-4"
         data-reveal
       >
         <div className="flex items-center gap-1 rounded-full border border-white/10 bg-black/30 p-1">

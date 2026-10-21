@@ -150,20 +150,20 @@ export default function Browse({ kind = 'movie' }) {
   const availableSorts = SORTS.filter((s) => !s.movieOnly || type === 'movie');
 
   return (
-    <div className="container-page pb-10 pt-[104px]">
+    <div className="container-page pb-10 pt-6">
       <header className="mb-7" data-reveal>
-        <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-400">
+        <p className="mb-1 text-[11px] font-semibold uppercase tracking-widest text-white/30">
           Browse
         </p>
-        <h1 className="text-[34px] font-extrabold tracking-[-0.03em] sm:text-[44px]">
+        <h1 className="text-[28px] font-black tracking-tight sm:text-[32px]">
           {meta.title}
         </h1>
-        <p className="mt-2 max-w-xl text-[13.5px] leading-relaxed text-white/45">{meta.blurb}</p>
+        <p className="mt-1 max-w-xl text-sm text-white/40">{meta.blurb}</p>
       </header>
 
       <div
         ref={gridRef}
-        className="mb-5 scroll-mt-24 rounded-2xl border border-white/[0.06] bg-white/[0.025] px-3 py-3 sm:px-4"
+        className="mb-5 scroll-mt-24 rounded-2xl border border-white/5 bg-[#18181b] px-3 py-3 sm:px-4"
         data-reveal
       >
         <div className="flex flex-col gap-3">

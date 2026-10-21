@@ -112,7 +112,7 @@ export default function Search() {
   const nothing = searched && !loading && !items.length && !(filter === 'multi' && people.length);
 
   return (
-    <div className="container-page pb-14 pt-[104px]">
+    <div className="container-page pb-14 pt-6">
       <div className="mx-auto max-w-3xl" data-reveal>
         <h1 className="text-center text-[28px] font-extrabold tracking-[-0.03em] sm:text-[36px]">
           Find something great
