@@ -3,6 +3,7 @@ import { Route, Routes, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import AuthModal from './components/AuthModal';
+import ErrorBoundary from './components/ErrorBoundary';
 import Home from './pages/Home';
 import Trending from './pages/Trending';
 import Browse from './pages/Browse';
@@ -32,6 +33,7 @@ export default function App() {
     <div className="flex min-h-screen flex-col bg-ink-950">
       <Navbar />
       <main className="flex-1">
+        <ErrorBoundary key={location.pathname}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/trending" element={<Trending />} />
@@ -62,6 +64,7 @@ export default function App() {
 
           <Route path="*" element={<NotFound />} />
         </Routes>
+        </ErrorBoundary>
       </main>
       <Footer />
       <AuthModal />

@@ -120,19 +120,11 @@ Four numbered servers plus an anime server are wired up in
 `src/lib/sources.js`. The UI only ever labels them **Server 1 / 2 / 3 / 4** and
 **Anime** — provider names are never rendered.
 
-- Servers 1–2 — embed players addressed by TMDB id:
+- Servers 1–3 — embed players addressed by TMDB id:
   `.../embed/movie/{tmdbId}`, `.../embed/tv/{tmdbId}/{season}/{episode}`.
   Server 1 accepts theme/branding, resume position, episode selector and
-  autoplay flags; server 2 accepts start time and episode selector.
-- Server 3 — the owner's personal Abyss library, resolved per title by
-  `src/lib/abyss.js`. Abyss has no TMDB-id catalog (each uploaded file has its
-  own slug), so the resolver lists the library once via
-  `GET https://api.abyss.to/v1/resources` and matches files by name. Naming
-  uploads with the TMDB id makes matches exact, e.g.
-  `Inception (2010) [27205].mkv`, `The Flash S01E02 [60735].mkv`. Embeds play
-  from the library's custom player domain (`abyssplayer.com`). Configure with
-  `VITE_ABYSS_API_KEY` (see `.env.example`); without a key Server 3 reports
-  itself unavailable and the player falls back to the other servers.
+  autoplay flags; server 2 accepts start time and episode selector; server 3
+  accepts start time.
 - Server 4 — a full watch page embedded as-is
   (`bingr.one/watch/movie/{tmdbId}`, `.../watch/tv/{tmdbId}/{season}/{episode}`);
   upstream offers no clean embed endpoint.

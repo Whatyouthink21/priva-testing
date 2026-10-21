@@ -16,7 +16,6 @@ import {
 import { IMG, api, runtimeLabel, titleOf, yearOf } from '../lib/tmdb';
 import {
   ANIME_SERVER_ID,
-  LIBRARY_SERVER_ID,
   PLAYERS,
   absoluteEpisode,
   downloadUrl,
@@ -26,7 +25,6 @@ import {
   playerUrl,
 } from '../lib/sources';
 import { resolveAnime } from '../lib/anime';
-import { ABYSS_CONFIGURED, resolveAbyss } from '../lib/abyss';
 import { useLibrary } from '../context/LibraryContext';
 import { useToast } from '../context/ToastContext';
 import { cx, secondsToClock } from '../lib/utils';
@@ -50,7 +48,6 @@ export default function Watch({ type = 'movie' }) {
   const [serverChoice, setServerChoice] = useState(null);
   const [animeLang, setAnimeLang] = useState('sub');
   const [animeState, setAnimeState] = useState({ status: 'idle', key: '', mapping: null });
-  const [abyssState, setAbyssState] = useState({ status: 'idle', url: null });
   const [episodes, setEpisodes] = useState([]);
   const [episodesLoading, setEpisodesLoading] = useState(false);
   const [startAt, setStartAt] = useState(undefined);
@@ -113,7 +110,6 @@ export default function Watch({ type = 'movie' }) {
     setError('');
     setServerChoice(null);
     setAnimeState({ status: 'idle', key: '', mapping: null });
-    setAbyssState({ status: 'idle', url: null });
     animeToastRef.current = false;
     window.scrollTo({ top: 0, behavior: 'instant' });
     api
@@ -184,12 +180,7 @@ export default function Watch({ type = 'movie' }) {
   /* ---------------- Server selection ---------------- */
 
   const preferredRaw = Number(settings.preferredServer) || 1;
-  const preferredServer =
-    preferredRaw === LIBRARY_SERVER_ID && !ABYSS_CONFIGURED
-      ? 1
-      : PLAYERS.some((p) => p.id === preferredRaw)
-        ? preferredRaw
-        : 1;
+  const preferredServer = PLAYERS.some((p) => p.id === preferredRaw) ? preferredRaw : 1;
   const autoServer =
     isAnime && animeState.status !== 'failed' ? ANIME_SERVER_ID : preferredServer;
   const server = serverChoice ?? autoServer;
@@ -231,22 +222,6 @@ export default function Watch({ type = 'movie' }) {
     return megaplayUrl({ anilistId: mapping.anilistId, malId: mapping.malId, episode: ep, lang: animeLang });
   }, [animeState, data, type, season, episode, animeLang]);
 
-  /* Personal-library file for Server 3 */
-  useEffect(() => {
-    if (server !== LIBRARY_SERVER_ID || !data) return;
-    let alive = true;
-    setAbyssState({ status: 'loading', url: null });
-    resolveAbyss({ tmdbId: id, title, year, type, season, episode }).then((res) => {
-      if (!alive) return;
-      setAbyssState(
-        res.status === 'found' ? { status: 'ready', url: res.url } : { status: res.status, url: null }
-      );
-    });
-    return () => {
-      alive = false;
-    };
-  }, [server, data, id, title, year, type, season, episode]);
-
   const embedSrc = useMemo(
     () =>
       playerUrl(typeof server === 'number' ? server : 1, type, id, {
@@ -259,14 +234,7 @@ export default function Watch({ type = 'movie' }) {
     [server, type, id, season, episode, startAt, settings.autoplayNext, settings.subtitles]
   );
 
-  const src =
-    server === ANIME_SERVER_ID
-      ? animeSrc
-      : server === LIBRARY_SERVER_ID
-        ? abyssState.status === 'ready'
-          ? abyssState.url
-          : null
-        : embedSrc;
+  const src = server === ANIME_SERVER_ID ? animeSrc : embedSrc;
   activeSrcRef.current = Boolean(src);
 
   const playerKey = `${server}-${season}-${episode}-${startAt || 'live'}-${animeLang}-${reloadNonce}`;
@@ -471,9 +439,7 @@ export default function Watch({ type = 'movie' }) {
   const serverNote =
     server === ANIME_SERVER_ID
       ? 'Anime server — if this episode is missing here, the regular servers below usually have it too.'
-      : server === LIBRARY_SERVER_ID
-        ? 'Server 3 streams from the personal library when a matching file exists.'
-        : server === 4
+      : server === 4
           ? 'Server 4 loads a full watch page inside the player — use its own controls to start playback.'
           : 'Stream not starting? Switch to another server — each one runs its own source.';
 
@@ -525,7 +491,9 @@ export default function Watch({ type = 'movie' }) {
                 referrerPolicy="origin"
                 className="absolute inset-0 h-full w-full"
               />
-            ) : server === ANIME_SERVER_ID ? (
+            ) : (
+              /* Only the anime server can reach here (resolving / unmapped);
+                 the numbered servers always produce a src. */
               <PlayerNotice
                 loading={animeState.status === 'loading'}
                 title={animeState.status === 'loading' ? 'Finding the anime source…' : 'Anime source not found'}
@@ -533,29 +501,6 @@ export default function Watch({ type = 'movie' }) {
                   animeState.status === 'loading'
                     ? 'Matching this title on the anime server.'
                     : "This title isn't mapped on the anime server yet. The regular servers below should have it."
-                }
-                onSwitch={() => selectServer(1)}
-              />
-            ) : (
-              <PlayerNotice
-                loading={abyssState.status === 'loading'}
-                title={
-                  abyssState.status === 'loading'
-                    ? 'Searching the library…'
-                    : abyssState.status === 'unconfigured'
-                      ? "Server 3 isn't available yet"
-                      : abyssState.status === 'error'
-                        ? 'Library unreachable'
-                        : 'Not in the library yet'
-                }
-                body={
-                  abyssState.status === 'loading'
-                    ? 'Looking for a matching file in the personal library.'
-                    : abyssState.status === 'unconfigured'
-                      ? "This server plays files from a personal library and hasn't been configured on this site. Pick another server below."
-                      : abyssState.status === 'error'
-                        ? "The personal library couldn't be reached right now. Pick another server below."
-                        : 'No matching file was found in the personal library for this title. Pick another server below.'
                 }
                 onSwitch={() => selectServer(1)}
               />

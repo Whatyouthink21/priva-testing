@@ -8,8 +8,7 @@
  * Servers:
  *   1 — embed player (themed, resume position, episode selector)
  *   2 — embed player (start time, episode selector)
- *   3 — personal library files; resolved per-title by src/lib/abyss.js
- *       (needs VITE_ABYSS_API_KEY, see .env.example). playerUrl returns null.
+ *   3 — embed player (start time)
  *   4 — full watch-page embed (no clean player endpoint upstream)
  *   "anime" — anime-only player; TMDB ids are mapped to AniList/MAL ids by
  *       src/lib/anime.js first. playerUrl returns null.
@@ -25,7 +24,6 @@ const join = (base, params) => {
   return `${base}?${search.toString()}`;
 };
 
-export const LIBRARY_SERVER_ID = 3;
 export const ANIME_SERVER_ID = 'anime';
 
 export const PLAYERS = [
@@ -71,13 +69,18 @@ export const PLAYERS = [
       }),
   },
   {
-    // Personal library (Abyss-backed custom domain). There is no TMDB-id URL
-    // for this server — src/lib/abyss.js resolves a file from the owner's
-    // library catalog and Watch.jsx uses that URL instead.
-    id: LIBRARY_SERVER_ID,
-    kind: 'library',
-    movie: () => null,
-    tv: () => null,
+    id: 3,
+    kind: 'embed',
+    movie: (id, opts = {}) =>
+      join(`https://zoryva.me/embed/movie/${id}`, {
+        color: ACCENT,
+        startAt: opts.startAt,
+      }),
+    tv: (id, season, episode, opts = {}) =>
+      join(`https://zoryva.me/embed/tv/${id}/${season}/${episode}`, {
+        color: ACCENT,
+        startAt: opts.startAt,
+      }),
   },
   {
     // Full watch page, embedded as-is (upstream has no /embed endpoint).
@@ -89,8 +92,8 @@ export const PLAYERS = [
 ];
 
 export function playerUrl(serverId, type, id, { season = 1, episode = 1, startAt, autoplayNext = true, subtitle } = {}) {
-  // The anime + library servers are resolved asynchronously in Watch.jsx.
-  if (serverId === ANIME_SERVER_ID || serverId === LIBRARY_SERVER_ID) return null;
+  // The anime server is resolved asynchronously in Watch.jsx.
+  if (serverId === ANIME_SERVER_ID) return null;
   const server = PLAYERS.find((p) => p.id === serverId) || PLAYERS[0];
   const opts = {
     startAt: startAt && startAt > 30 ? Math.floor(startAt) : undefined,
