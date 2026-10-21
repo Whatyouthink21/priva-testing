@@ -1,277 +1,134 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Bookmark,
   Check,
-  Cloud,
   Edit3,
   HelpCircle,
   History,
+  LogIn,
   LogOut,
-  Play,
-  Settings,
   Sparkles,
   Trash2,
+  UserPlus,
 } from 'lucide-react';
 import ContinueCard from '../components/ContinueCard';
 import PosterCard from '../components/PosterCard';
-import ContentRow from '../components/ContentRow';
-import { AVATAR_PRESETS, useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 import { useLibrary } from '../context/LibraryContext';
 import { useToast } from '../context/ToastContext';
 import { api, normalizeItem } from '../lib/tmdb';
-import { SERVERS } from '../lib/sources';
 
 export default function MySpace() {
-  const {
-    user,
-    isSignedIn,
-    displayName,
-    avatarGradient,
-    openAuthModal,
-    updateUserProfile,
-    signOut,
-  } = useAuth();
+  const { user, signOut, updateDisplayName } = useAuth();
   const {
     myList,
-    history,
     continueWatching,
     recentSeeds,
-    settings,
-    removeFromList,
+    toggleMyList,
     removeWatchProgress,
-    clearWatchHistory,
-    updateSettings,
+    clearContinueWatching,
   } = useLibrary();
   const { toast } = useToast();
 
-  const [listFilter, setListFilter] = useState('all');
-  const [editingProfile, setEditingProfile] = useState(false);
-  const [draftName, setDraftName] = useState(displayName || '');
-  const [settingsOpen, setSettingsOpen] = useState(false);
-
-  const [fallbackSeed, setFallbackSeed] = useState(null);
-  const [becausePrimary, setBecausePrimary] = useState([]);
-  const [becauseSecondary, setBecauseSecondary] = useState([]);
-  const [loadingRecs, setLoadingRecs] = useState(true);
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState('');
+  const [becauseItems, setBecauseItems] = useState([]);
+  const [becauseTitle, setBecauseTitle] = useState('Because You Watched');
+  const [loadingBecause, setLoadingBecause] = useState(true);
 
   useEffect(() => {
     document.title = 'My Space · Priva';
   }, []);
 
-  useEffect(() => {
-    setDraftName(displayName || '');
-  }, [displayName]);
-
-  // Determine the seed title(s) for "Because You Watched"
-  const activeSeed = recentSeeds[0] || fallbackSeed;
-  const secondSeed = recentSeeds[1] || null;
+  const seed = recentSeeds[0] || null;
 
   useEffect(() => {
-    if (recentSeeds.length > 0) return undefined;
     let cancelled = false;
-    api
-      .trendingAll(1)
-      .then((res) => {
-        if (cancelled) return;
-        const first = (res.results || []).find((x) => x.media_type !== 'person');
-        if (first) setFallbackSeed(normalizeItem(first));
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [recentSeeds.length]);
+    setLoadingBecause(true);
 
-  useEffect(() => {
-    if (!activeSeed?.id) return undefined;
-    let cancelled = false;
-    setLoadingRecs(true);
-    api
-      .recommendationsFor(activeSeed.type || 'movie', activeSeed.id)
-      .then((items) => {
-        if (!cancelled) setBecausePrimary(items);
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingRecs(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [activeSeed?.id, activeSeed?.type]);
-
-  useEffect(() => {
-    if (!secondSeed?.id) {
-      setBecauseSecondary([]);
-      return undefined;
+    async function loadRecommendations() {
+      try {
+        if (seed?.id) {
+          setBecauseTitle(`Because You Watched ${seed.title}`);
+          const recs = await api.recommendationsFor(seed.type || 'movie', seed.id);
+          if (!cancelled && recs.length) {
+            setBecauseItems(recs);
+            return;
+          }
+        }
+        setBecauseTitle('Recommended For You');
+        const fallback = await api.trendingAll(1);
+        if (!cancelled) {
+          setBecauseItems(
+            (fallback.results || [])
+              .filter((x) => x.media_type !== 'person' && x.poster_path)
+              .slice(0, 14)
+              .map((x) => normalizeItem(x))
+          );
+        }
+      } catch {
+        if (!cancelled) setBecauseItems([]);
+      } finally {
+        if (!cancelled) setLoadingBecause(false);
+      }
     }
-    let cancelled = false;
-    api.recommendationsFor(secondSeed.type || 'movie', secondSeed.id).then((items) => {
-      if (!cancelled) setBecauseSecondary(items);
-    });
+
+    loadRecommendations();
     return () => {
       cancelled = true;
     };
-  }, [secondSeed?.id, secondSeed?.type]);
+  }, [seed?.id, seed?.type, seed?.title]);
 
-  const filteredList = useMemo(() => {
-    if (listFilter === 'all') return myList;
-    if (listFilter === 'anime') return myList.filter((i) => i.isAnime);
-    return myList.filter((i) => i.type === listFilter && !i.isAnime);
-  }, [myList, listFilter]);
+  const initial = (user?.displayName || user?.email || 'P').trim().charAt(0).toUpperCase();
 
-  const handleSaveProfile = async (e) => {
+  const saveProfileName = async (e) => {
     e.preventDefault();
-    if (!draftName.trim()) return;
-    await updateUserProfile({ name: draftName.trim() });
-    setEditingProfile(false);
-    toast('Profile updated');
+    if (!nameDraft.trim()) return;
+    try {
+      await updateDisplayName(nameDraft.trim());
+      setEditingName(false);
+      toast('Profile name updated', 'success');
+    } catch {
+      toast('Could not update profile name', 'error');
+    }
   };
 
   return (
-    <div className="myspace-glow min-h-screen pt-16 lg:pt-10">
-      {/* Top Bar: Profile / Sign In Hero matching bingr.one/space */}
-      <div className="border-b border-white/[0.06] pb-10">
-        <div className="px-4 sm:px-8 lg:pl-[108px] lg:pr-12">
-          {/* Top-right utility buttons */}
-          <div className="flex flex-wrap items-center justify-end gap-2.5">
-            <button
-              type="button"
-              onClick={() => setSettingsOpen((v) => !v)}
-              className="inline-flex items-center gap-2 rounded-xl bg-white/[0.08] px-4 py-2 text-[13px] font-semibold text-white transition hover:bg-white/[0.14]"
-            >
-              <Settings size={15} />
-              <span>Player Settings</span>
-            </button>
-
-            <Link
-              to="/help"
-              className="inline-flex items-center gap-2 rounded-xl bg-white/[0.08] px-4 py-2 text-[13px] font-semibold text-white transition hover:bg-white/[0.14]"
-            >
-              <HelpCircle size={15} />
-              <span>Help &amp; Support</span>
-            </Link>
-
-            {isSignedIn && (
-              <button
-                type="button"
-                onClick={async () => {
-                  await signOut();
-                  toast('Signed out of Priva', 'info');
-                }}
-                className="inline-flex items-center gap-2 rounded-xl border border-white/[0.1] bg-white/[0.04] px-4 py-2 text-[13px] font-semibold text-[#cbd5e1] transition hover:border-red-500/40 hover:bg-red-500/15 hover:text-red-300"
-              >
-                <LogOut size={15} />
-                <span>Sign Out</span>
-              </button>
-            )}
-          </div>
-
-          {/* Collapsible Player Preferences Panel */}
-          {settingsOpen && (
-            <div className="mt-5 rounded-2xl border border-white/[0.08] bg-[#16181f]/90 p-5 backdrop-blur-xl animate-pop-card">
-              <h3 className="font-display text-[16px] font-bold text-white">
-                Playback Preferences
-              </h3>
-              <div className="mt-4 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-[13.5px] font-semibold text-white">Default Server</p>
-                  <p className="text-[12px] text-[#8f98b2]">
-                    Automatically start every movie &amp; episode on your preferred server
-                  </p>
-                  <div className="mt-2.5 flex flex-wrap gap-2">
-                    {SERVERS.map((srv) => (
-                      <button
-                        key={srv.id}
-                        type="button"
-                        onClick={() => {
-                          updateSettings({ defaultServer: srv.id });
-                          toast(`Default set to ${srv.label}`);
-                        }}
-                        className={`rounded-lg px-4 py-2 text-[12.5px] font-bold transition ${
-                          settings.defaultServer === srv.id
-                            ? 'bg-blue-600 text-white shadow'
-                            : 'bg-[#0f1014] text-[#8f98b2] ring-1 ring-white/[0.08] hover:text-white'
-                        }`}
-                      >
-                        {srv.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <label className="flex cursor-pointer items-center gap-3 rounded-xl bg-[#0f1014] px-4 py-3 ring-1 ring-white/[0.07]">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(settings.autoplayNext)}
-                    onChange={(e) => updateSettings({ autoplayNext: e.target.checked })}
-                    className="h-4 w-4 rounded accent-blue-600"
+    <div className="min-h-screen bg-[#0f1014] pb-12 pt-8 lg:pt-12">
+      {/* Top Profile Banner */}
+      <div className="px-4 sm:px-8 lg:pl-[108px] lg:pr-12">
+        <div
+          className="relative overflow-hidden rounded-2xl border border-white/[0.08] p-6 sm:p-8"
+          style={{
+            background:
+              'radial-gradient(ellipse at top right, rgba(37, 99, 235, 0.22), rgba(22, 24, 31, 0.96) 62%)',
+          }}
+        >
+          <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
+            {user ? (
+              <div className="flex items-center gap-4 sm:gap-5">
+                {user.photoURL ? (
+                  <img
+                    src={user.photoURL}
+                    alt={user.displayName || 'Profile'}
+                    className="h-16 w-16 rounded-full object-cover ring-2 ring-blue-400/50 sm:h-20 sm:w-20"
                   />
-                  <div>
-                    <span className="block text-[13px] font-semibold text-white">
-                      Auto-play Next Episode
-                    </span>
-                    <span className="block text-[11.5px] text-[#8f98b2]">
-                      Seamless binge mode for TV &amp; Anime
-                    </span>
+                ) : (
+                  <div className="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#2563eb] via-[#1d4ed8] to-[#06b6d4] font-display text-2xl font-extrabold text-white shadow-lg sm:h-20 sm:w-20 sm:text-3xl">
+                    {initial}
                   </div>
-                </label>
-              </div>
-            </div>
-          )}
-
-          {/* Signed Out vs Signed In Hero */}
-          {!isSignedIn ? (
-            <div className="mx-auto mt-6 flex max-w-lg flex-col items-center text-center">
-              {/* Glowing Cosmic Emblem matching Hotstar/Bingr My Space Login */}
-              <div className="relative mb-5 grid h-24 w-24 place-items-center rounded-full bg-gradient-to-b from-blue-500/25 via-indigo-600/20 to-transparent ring-1 ring-blue-400/25 shadow-[0_0_60px_rgba(37,99,235,0.45)]">
-                <div className="grid h-16 w-16 place-items-center rounded-full bg-gradient-to-br from-[#38bdf8] via-[#2563eb] to-[#4f46e5] text-white shadow-lg">
-                  <Sparkles size={28} />
-                </div>
-              </div>
-
-              <h1 className="font-display text-[26px] font-extrabold tracking-[-0.02em] text-white sm:text-[30px]">
-                Log in to Priva
-              </h1>
-              <p className="mt-1.5 max-w-md text-[14px] leading-relaxed text-[#8f98b2]">
-                Start watching from where you left off, sync your My List across devices, and unlock
-                personalized recommendations.
-              </p>
-
-              <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => openAuthModal('signin')}
-                  className="btn-priva-blue h-12 min-w-[190px] rounded-xl px-8 text-[15px] font-bold text-white"
-                >
-                  Log In
-                </button>
-                <button
-                  type="button"
-                  onClick={() => openAuthModal('signup')}
-                  className="h-12 rounded-xl border border-white/[0.12] bg-white/[0.06] px-6 text-[14px] font-semibold text-white transition hover:bg-white/[0.12]"
-                >
-                  Sign Up
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="mt-6 flex flex-col justify-between gap-6 sm:flex-row sm:items-center">
-              <div className="flex items-center gap-4">
-                <div
-                  className={`grid h-16 w-16 shrink-0 place-items-center rounded-full bg-gradient-to-br ${avatarGradient} font-display text-[24px] font-extrabold text-white ring-4 ring-white/15 shadow-[0_10px_30px_rgba(37,99,235,0.4)]`}
-                >
-                  {(displayName || 'U').charAt(0).toUpperCase()}
-                </div>
+                )}
 
                 <div>
-                  {editingProfile ? (
-                    <form onSubmit={handleSaveProfile} className="flex items-center gap-2">
+                  {editingName ? (
+                    <form onSubmit={saveProfileName} className="flex items-center gap-2">
                       <input
                         type="text"
-                        value={draftName}
-                        onChange={(e) => setDraftName(e.target.value)}
-                        className="h-9 rounded-lg border border-white/15 bg-[#0f1014] px-3 text-[15px] font-semibold text-white focus:border-blue-500 focus:outline-none"
+                        value={nameDraft}
+                        onChange={(e) => setNameDraft(e.target.value)}
+                        className="h-9 rounded-lg border border-white/15 bg-[#0f1014] px-3 text-[14px] text-white focus:border-blue-500 focus:outline-none"
+                        autoFocus
                       />
                       <button
                         type="submit"
@@ -281,87 +138,109 @@ export default function MySpace() {
                       </button>
                     </form>
                   ) : (
-                    <div className="flex items-center gap-2.5">
-                      <h1 className="font-display text-[24px] font-extrabold text-white sm:text-[28px]">
-                        {displayName}
+                    <div className="flex items-center gap-2">
+                      <h1 className="font-display text-[22px] font-extrabold text-white sm:text-[26px]">
+                        {user.displayName || user.email?.split('@')[0] || 'Priva Member'}
                       </h1>
                       <button
                         type="button"
-                        onClick={() => setEditingProfile(true)}
-                        aria-label="Edit profile name"
-                        className="text-[#8f98b2] transition hover:text-white"
+                        onClick={() => {
+                          setNameDraft(user.displayName || '');
+                          setEditingName(true);
+                        }}
+                        aria-label="Edit display name"
+                        className="text-[#8f98b2] transition-colors hover:text-white"
                       >
                         <Edit3 size={15} />
                       </button>
                     </div>
                   )}
-
-                  <div className="mt-1 flex flex-wrap items-center gap-2.5 text-[12.5px] text-[#8f98b2]">
-                    <span>{user?.email}</span>
-                    <span>·</span>
-                    <span className="inline-flex items-center gap-1 text-emerald-400">
-                      <Cloud size={13} /> Cloud Synced
-                    </span>
-                  </div>
-
-                  {/* Quick Avatar Ring Picker */}
-                  <div className="mt-2.5 flex items-center gap-1.5">
-                    {AVATAR_PRESETS.map((preset) => (
-                      <button
-                        key={preset}
-                        type="button"
-                        onClick={() => updateUserProfile({ avatar: preset })}
-                        aria-label="Choose avatar theme"
-                        className={`h-5 w-5 rounded-full bg-gradient-to-br ${preset} transition-transform ${
-                          avatarGradient === preset ? 'scale-125 ring-2 ring-white' : 'opacity-65 hover:opacity-100'
-                        }`}
-                      />
-                    ))}
-                  </div>
+                  <p className="mt-0.5 text-[13px] text-[#8f98b2]">{user.email}</p>
+                  <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-300">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                    <span>Cloud Sync Active · {myList.length} Saved</span>
+                  </p>
                 </div>
               </div>
-
-              {/* Quick Stats */}
-              <div className="flex items-center gap-6 rounded-2xl border border-white/[0.07] bg-[#16181f]/75 px-6 py-3.5 backdrop-blur">
-                <div>
-                  <span className="block font-display text-[20px] font-extrabold text-white">
-                    {continueWatching.length}
-                  </span>
-                  <span className="text-[11.5px] font-medium text-[#8f98b2]">In Progress</span>
-                </div>
-                <div className="h-8 w-px bg-white/[0.08]" />
-                <div>
-                  <span className="block font-display text-[20px] font-extrabold text-white">
-                    {myList.length}
-                  </span>
-                  <span className="text-[11.5px] font-medium text-[#8f98b2]">My List</span>
-                </div>
+            ) : (
+              <div className="max-w-lg">
+                <h1 className="font-display text-[24px] font-extrabold tracking-[-0.02em] text-white sm:text-[28px]">
+                  Log in to Priva
+                </h1>
+                <p className="mt-1.5 text-[14px] leading-relaxed text-[#9aa3bc]">
+                  Start watching from where you left off, personalise your My List and sync
+                  playback across every device.
+                </p>
               </div>
+            )}
+
+            <div className="flex flex-wrap items-center gap-3">
+              <Link
+                to="/help"
+                className="inline-flex h-11 items-center gap-2 rounded-xl border border-white/[0.1] bg-white/[0.06] px-4 text-[13.5px] font-semibold text-white transition-colors hover:bg-white/[0.12]"
+              >
+                <HelpCircle size={16} />
+                <span>Help &amp; Support</span>
+              </Link>
+
+              {user ? (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await signOut();
+                    toast('Signed out of Priva', 'info');
+                  }}
+                  className="inline-flex h-11 items-center gap-2 rounded-xl border border-red-500/25 bg-red-500/10 px-4 text-[13.5px] font-semibold text-red-200 transition-colors hover:bg-red-500/20"
+                >
+                  <LogOut size={16} />
+                  <span>Sign Out</span>
+                </button>
+              ) : (
+                <>
+                  <Link
+                    to="/auth?mode=signin"
+                    className="btn-priva-blue inline-flex h-11 items-center gap-2 rounded-xl px-6 text-[14px] font-bold text-white"
+                  >
+                    <LogIn size={16} />
+                    <span>Sign In</span>
+                  </Link>
+                  <Link
+                    to="/auth?mode=signup"
+                    className="inline-flex h-11 items-center gap-2 rounded-xl border border-white/[0.12] bg-white/[0.08] px-5 text-[14px] font-semibold text-white transition-colors hover:bg-white/[0.15]"
+                  >
+                    <UserPlus size={16} />
+                    <span>Create Account</span>
+                  </Link>
+                </>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </div>
 
-      {/* ==================================================================== */}
-      {/* 1. CONTINUE WATCHING SECTION                                         */}
-      {/* ==================================================================== */}
-      <section className="pt-8">
-        <div className="mb-3.5 flex items-center justify-between px-4 sm:px-8 lg:pl-[108px] lg:pr-12">
+      {/* SECTION 1: Continue Watching */}
+      <section className="mt-10 px-4 sm:px-8 lg:pl-[108px] lg:pr-12">
+        <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <History size={19} className="text-blue-400" />
             <h2 className="font-display text-[20px] font-bold tracking-[-0.02em] text-white sm:text-[22px]">
               Continue Watching
             </h2>
+            {continueWatching.length > 0 && (
+              <span className="rounded-full bg-white/[0.08] px-2.5 py-0.5 text-[11.5px] font-semibold text-[#8f98b2]">
+                {continueWatching.length}
+              </span>
+            )}
           </div>
 
-          {history.length > 0 && (
+          {continueWatching.length > 0 && (
             <button
               type="button"
               onClick={() => {
-                clearWatchHistory();
+                clearContinueWatching();
                 toast('Cleared Continue Watching history', 'info');
               }}
-              className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-[#8f98b2] transition hover:text-red-400"
+              className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-[#8f98b2] transition-colors hover:text-red-400"
             >
               <Trash2 size={14} />
               <span>Clear All</span>
@@ -370,143 +249,90 @@ export default function MySpace() {
         </div>
 
         {continueWatching.length > 0 ? (
-          <div className="no-scrollbar flex gap-4 overflow-x-auto px-4 pb-4 sm:px-8 lg:pl-[108px] lg:pr-12">
+          <div className="no-scrollbar flex gap-4 overflow-x-auto pb-2">
             {continueWatching.map((entry) => (
               <ContinueCard
                 key={`${entry.type}-${entry.id}`}
                 entry={entry}
                 onRemove={(item) => {
                   removeWatchProgress(item);
-                  toast(`Removed "${item.title}" from Continue Watching`, 'info');
+                  toast(`Removed "${item.title}"`, 'info');
                 }}
               />
             ))}
           </div>
         ) : (
-          <div className="px-4 sm:px-8 lg:pl-[108px] lg:pr-12">
-            <div className="flex flex-col items-start justify-between gap-4 rounded-2xl border border-white/[0.07] bg-[#16181f]/65 p-6 sm:flex-row sm:items-center">
-              <div>
-                <p className="text-[15px] font-semibold text-white">
-                  Pick up right where you left off
-                </p>
-                <p className="mt-1 text-[13px] text-[#8f98b2]">
-                  Any movie, series, or anime you start watching appears here automatically with your
-                  saved timestamp.
-                </p>
-              </div>
-              <Link
-                to="/home"
-                className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-white/[0.1] px-4 py-2.5 text-[13px] font-semibold text-white transition hover:bg-white/[0.18]"
-              >
-                <Play size={14} className="fill-current" />
-                <span>Start Watching</span>
-              </Link>
-            </div>
+          <div className="rounded-xl border border-white/[0.06] bg-[#16181f]/65 p-6 text-[13.5px] text-[#8f98b2]">
+            Movies, TV episodes, and anime you start watching appear here automatically with your
+            resume progress bar.{' '}
+            <Link to="/home" className="font-semibold text-white hover:underline">
+              Explore titles
+            </Link>
           </div>
         )}
       </section>
 
-      {/* ==================================================================== */}
-      {/* 2. MY LIST SECTION                                                   */}
-      {/* ==================================================================== */}
-      <section className="pt-8">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 px-4 sm:px-8 lg:pl-[108px] lg:pr-12">
-          <div className="flex items-center gap-2.5">
-            <Bookmark size={19} className="text-blue-400" />
-            <h2 className="font-display text-[20px] font-bold tracking-[-0.02em] text-white sm:text-[22px]">
-              My List
-            </h2>
-            {myList.length > 0 && (
-              <span className="rounded-full bg-white/[0.09] px-2.5 py-0.5 text-[12px] font-semibold text-[#cbd5e1]">
-                {myList.length}
-              </span>
-            )}
-          </div>
-
+      {/* SECTION 2: My List */}
+      <section className="mt-10 px-4 sm:px-8 lg:pl-[108px] lg:pr-12">
+        <div className="mb-4 flex items-center gap-2.5">
+          <Bookmark size={19} className="text-blue-400" />
+          <h2 className="font-display text-[20px] font-bold tracking-[-0.02em] text-white sm:text-[22px]">
+            My List
+          </h2>
           {myList.length > 0 && (
-            <div className="flex items-center gap-1.5 rounded-xl bg-[#16181f] p-1 ring-1 ring-white/[0.07]">
-              {[
-                { id: 'all', label: 'All' },
-                { id: 'movie', label: 'Movies' },
-                { id: 'tv', label: 'Series' },
-                { id: 'anime', label: 'Anime' },
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setListFilter(tab.id)}
-                  className={`rounded-lg px-3 py-1 text-[12px] font-semibold transition ${
-                    listFilter === tab.id
-                      ? 'bg-white text-[#0f1014]'
-                      : 'text-[#8f98b2] hover:text-white'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
+            <span className="rounded-full bg-white/[0.08] px-2.5 py-0.5 text-[11.5px] font-semibold text-[#8f98b2]">
+              {myList.length}
+            </span>
           )}
         </div>
 
-        {filteredList.length > 0 ? (
-          <div className="grid grid-cols-2 gap-4 px-4 sm:grid-cols-3 sm:px-8 md:grid-cols-4 lg:grid-cols-5 lg:pl-[108px] lg:pr-12 xl:grid-cols-6 2xl:grid-cols-7">
-            {filteredList.map((item) => (
+        {myList.length > 0 ? (
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7">
+            {myList.map((item) => (
               <PosterCard
                 key={`${item.type}-${item.id}`}
                 item={item}
                 onRemove={(target) => {
-                  removeFromList(target);
+                  toggleMyList(target);
                   toast(`Removed "${target.title}" from My List`, 'info');
                 }}
               />
             ))}
           </div>
         ) : (
-          <div className="px-4 sm:px-8 lg:pl-[108px] lg:pr-12">
-            <div className="flex flex-col items-start justify-between gap-4 rounded-2xl border border-white/[0.07] bg-[#16181f]/65 p-6 sm:flex-row sm:items-center">
-              <div>
-                <p className="text-[15px] font-semibold text-white">Your watchlist is ready</p>
-                <p className="mt-1 text-[13px] text-[#8f98b2]">
-                  Tap the <span className="font-bold text-white">+</span> button on any movie, TV
-                  series, or anime to save it to My List.
-                </p>
-              </div>
-              <Link
-                to="/explore"
-                className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-white/[0.1] px-4 py-2.5 text-[13px] font-semibold text-white transition hover:bg-white/[0.18]"
-              >
-                <span>Browse Titles</span>
-              </Link>
-            </div>
+          <div className="rounded-xl border border-white/[0.06] bg-[#16181f]/65 p-6 text-[13.5px] text-[#8f98b2]">
+            Your watchlist is empty. Click the <strong className="text-white">+</strong> button on
+            any movie, show, or anime to save it to My List.
           </div>
         )}
       </section>
 
-      {/* ==================================================================== */}
-      {/* 3. BECAUSE YOU WATCHED SECTION                                       */}
-      {/* ==================================================================== */}
-      <div className="pt-6">
-        <ContentRow
-          title={
-            recentSeeds.length > 0
-              ? `Because You Watched ${activeSeed?.title || ''}`
-              : activeSeed?.title
-                ? `Because You Watched · Trending Like ${activeSeed.title}`
-                : 'Because You Watched'
-          }
-          items={becausePrimary}
-          loading={loadingRecs}
-          viewAllTo={activeSeed ? `/${activeSeed.type || 'movie'}/${activeSeed.id}` : '/explore'}
-        />
+      {/* SECTION 3: Because You Watched */}
+      <section className="mt-10 px-4 sm:px-8 lg:pl-[108px] lg:pr-12">
+        <div className="mb-4 flex items-center gap-2.5">
+          <Sparkles size={19} className="text-blue-400" />
+          <h2 className="font-display text-[20px] font-bold tracking-[-0.02em] text-white sm:text-[22px]">
+            {becauseTitle}
+          </h2>
+        </div>
 
-        {secondSeed && becauseSecondary.length > 0 && (
-          <ContentRow
-            title={`Because You Watched ${secondSeed.title}`}
-            items={becauseSecondary}
-            viewAllTo={`/${secondSeed.type || 'movie'}/${secondSeed.id}`}
-          />
+        {loadingBecause ? (
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7">
+            {Array.from({ length: 7 }).map((_, i) => (
+              <div key={i}>
+                <div className="skeleton aspect-[2/3] w-full rounded-[8px]" />
+                <div className="skeleton mt-2 h-3.5 w-3/4 rounded" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7">
+            {becauseItems.slice(0, 14).map((item) => (
+              <PosterCard key={`${item.type}-${item.id}`} item={item} />
+            ))}
+          </div>
         )}
-      </div>
+      </section>
     </div>
   );
 }

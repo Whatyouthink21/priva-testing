@@ -59,20 +59,20 @@ export default function RankedRow({ title, items = [], loading = false, viewAllT
                   to={`/${item.type}/${item.id}`}
                   className="group/rank relative flex w-[166px] shrink-0 items-end pl-7 sm:w-[196px] sm:pl-9"
                 >
-                  {/* Hotstar / Bingr Giant Gradient Rank Number */}
                   <span
                     aria-hidden="true"
-                    className="rank-glyph pointer-events-none absolute -bottom-1 left-0 z-20 text-[84px] transition-transform duration-300 group-hover/rank:-translate-y-1.5 sm:text-[104px]"
+                    className="rank-glyph pointer-events-none absolute -bottom-1 left-0 z-20 text-[84px] transition-transform duration-200 group-hover/rank:-translate-y-1.5 sm:text-[104px]"
                   >
                     {idx + 1}
                   </span>
 
-                  <div className="relative z-10 aspect-[2/3] w-full overflow-hidden rounded-[8px] bg-[#16181f] ring-1 ring-white/[0.08] transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/rank:scale-[1.05] group-hover/rank:ring-white/25 group-hover/rank:shadow-[0_18px_40px_rgba(0,0,0,0.8)]">
+                  <div className="relative z-10 aspect-[2/3] w-full overflow-hidden rounded-[8px] bg-[#16181f] ring-1 ring-white/[0.08] transition-transform duration-200 ease-out group-hover/rank:scale-[1.04] group-hover/rank:ring-white/25">
                     {item.poster ? (
                       <img
-                        src={IMG.poster(item.poster, 'w500')}
+                        src={IMG.poster(item.poster, 'w342')}
                         alt={item.title}
                         loading="lazy"
+                        decoding="async"
                         className="h-full w-full object-cover"
                       />
                     ) : (

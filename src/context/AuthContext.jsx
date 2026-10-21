@@ -60,8 +60,6 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [authModalMode, setAuthModalMode] = useState('signin');
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (nextUser) => {
@@ -85,35 +83,38 @@ export function AuthProvider({ children }) {
     return unsub;
   }, []);
 
-  const openAuthModal = useCallback((mode = 'signin') => {
-    setAuthModalMode(mode);
-    setAuthModalOpen(true);
-  }, []);
-
-  const closeAuthModal = useCallback(() => {
-    setAuthModalOpen(false);
-  }, []);
-
   const signUp = useCallback(async (email, password, name) => {
     const cred = await createUserWithEmailAndPassword(auth, email, password);
-    const cleanName = name || email.split('@')[0];
+    const cleanName = (name || '').trim() || email.split('@')[0];
     await updateProfile(cred.user, { displayName: cleanName });
-    const data = await ensureUserDoc(cred.user, { name: cleanName });
-    setProfile(data);
+    try {
+      const data = await ensureUserDoc(cred.user, { name: cleanName });
+      setProfile(data);
+    } catch {
+      setProfile({ name: cleanName, email, avatar: AVATAR_PRESETS[0] });
+    }
     return cred.user;
   }, []);
 
   const signIn = useCallback(async (email, password) => {
     const cred = await signInWithEmailAndPassword(auth, email, password);
-    const data = await ensureUserDoc(cred.user);
-    setProfile(data);
+    try {
+      const data = await ensureUserDoc(cred.user);
+      setProfile(data);
+    } catch {
+      // Firestore profile sync is best-effort and should never block sign-in
+    }
     return cred.user;
   }, []);
 
   const signInWithGoogle = useCallback(async () => {
     const cred = await signInWithPopup(auth, googleProvider);
-    const data = await ensureUserDoc(cred.user);
-    setProfile(data);
+    try {
+      const data = await ensureUserDoc(cred.user);
+      setProfile(data);
+    } catch {
+      // Ignore non-fatal Firestore rules errors if any
+    }
     return cred.user;
   }, []);
 
@@ -129,10 +130,19 @@ export function AuthProvider({ children }) {
       }
       if (avatar !== undefined) patch.avatar = avatar;
       patch.updatedAt = serverTimestamp();
-      await setDoc(doc(db, 'users', user.uid), patch, { merge: true });
+      try {
+        await setDoc(doc(db, 'users', user.uid), patch, { merge: true });
+      } catch {
+        // Keep local auth profile updated even if Firestore write fails
+      }
       setProfile((prev) => ({ ...prev, ...patch }));
     },
     [user]
+  );
+
+  const updateDisplayName = useCallback(
+    async (name) => updateUserProfile({ name }),
+    [updateUserProfile]
   );
 
   const signOut = useCallback(async () => {
@@ -152,15 +162,14 @@ export function AuthProvider({ children }) {
       isSignedIn: Boolean(user),
       displayName,
       avatarGradient: profile?.avatar || AVATAR_PRESETS[0],
-      authModalOpen,
-      authModalMode,
-      openAuthModal,
-      closeAuthModal,
       signUp,
+      signUpEmail: signUp,
       signIn,
+      signInEmail: signIn,
       signInWithGoogle,
       resetPassword,
       updateUserProfile,
+      updateDisplayName,
       signOut,
     }),
     [
@@ -168,15 +177,12 @@ export function AuthProvider({ children }) {
       profile,
       loading,
       displayName,
-      authModalOpen,
-      authModalMode,
-      openAuthModal,
-      closeAuthModal,
       signUp,
       signIn,
       signInWithGoogle,
       resetPassword,
       updateUserProfile,
+      updateDisplayName,
       signOut,
     ]
   );

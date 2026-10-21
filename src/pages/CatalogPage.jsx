@@ -5,7 +5,7 @@ import HeroBanner from '../components/HeroBanner';
 import RankedRow from '../components/RankedRow';
 import ContentRow from '../components/ContentRow';
 import PosterCard from '../components/PosterCard';
-import { api, hydrateHeroSlides, normalizeItem } from '../lib/tmdb';
+import { api, normalizeItem, prepareHeroSlides } from '../lib/tmdb';
 
 const CONFIGS = {
   movie: {
@@ -68,58 +68,99 @@ const CONFIGS = {
   },
 };
 
+const catalogSnapshots = new Map();
+
 export default function CatalogPage({ kind = 'movie' }) {
   const cfg = CONFIGS[kind] || CONFIGS.movie;
-  const [loading, setLoading] = useState(true);
-  const [heroSlides, setHeroSlides] = useState([]);
-  const [ranked, setRanked] = useState([]);
-  const [rows, setRows] = useState([]);
-  const [exploreGrid, setExploreGrid] = useState([]);
+  const cached = catalogSnapshots.get(kind);
+
+  const [heroLoading, setHeroLoading] = useState(!cached);
+  const [rowsLoading, setRowsLoading] = useState(!cached);
+  const [heroSlides, setHeroSlides] = useState(() => cached?.heroSlides || []);
+  const [ranked, setRanked] = useState(() => cached?.ranked || []);
+  const [rows, setRows] = useState(() => cached?.rows || []);
+  const [exploreGrid, setExploreGrid] = useState(() => cached?.exploreGrid || []);
 
   useEffect(() => {
     document.title = cfg.pageTitle;
+    const hit = catalogSnapshots.get(kind);
+    if (hit) {
+      setHeroSlides(hit.heroSlides);
+      setRanked(hit.ranked);
+      setRows(hit.rows);
+      setExploreGrid(hit.exploreGrid);
+      setHeroLoading(false);
+      setRowsLoading(false);
+      return undefined;
+    }
+
     let cancelled = false;
-    setLoading(true);
+    setHeroLoading(true);
+    setRowsLoading(true);
 
     async function load() {
       try {
-        const [heroRes, exploreRes, ...shelfResults] = await Promise.all([
-          cfg.heroFetch(),
-          cfg.exploreFetch(),
-          ...cfg.shelves.map((s) => s.fetch()),
-        ]);
-
+        // Stage 1: Render Hero + Top 10 Ranked Row immediately from 1 fast request
+        const heroRes = await cfg.heroFetch();
         if (cancelled) return;
 
         const rawHero = (heroRes.results || []).map((x) =>
           cfg.isAnime ? { ...x, isAnime: true } : x
         );
-        const slides = await hydrateHeroSlides(rawHero, cfg.fallbackType, 10);
-        if (cancelled) return;
+        const slides = prepareHeroSlides(rawHero, cfg.fallbackType, 10);
+        const rankedItems = rawHero.map((x) => normalizeItem(x, cfg.fallbackType));
 
         setHeroSlides(slides);
-        setRanked(rawHero.map((x) => normalizeItem(x, cfg.fallbackType)));
-        setRows(
-          cfg.shelves.map((shelf, i) => ({
-            title: shelf.title,
-            slug: shelf.slug,
-            items: (shelfResults[i]?.results || []).map((x) =>
-              normalizeItem(
-                cfg.isAnime ? { ...x, isAnime: true } : x,
-                shelf.typeOverride || cfg.fallbackType
+        setRanked(rankedItems);
+        setHeroLoading(false);
+
+        // Stage 2: Stream remaining shelves without ever blocking the Hero
+        const settled = await Promise.allSettled([
+          cfg.exploreFetch(),
+          ...cfg.shelves.map((s) => s.fetch()),
+        ]);
+        if (cancelled) return;
+
+        const exploreRes = settled[0];
+        const shelfResults = settled.slice(1);
+
+        const nextRows = cfg.shelves.map((shelf, i) => ({
+          title: shelf.title,
+          slug: shelf.slug,
+          items:
+            shelfResults[i]?.status === 'fulfilled'
+              ? (shelfResults[i].value.results || []).map((x) =>
+                  normalizeItem(
+                    cfg.isAnime ? { ...x, isAnime: true } : x,
+                    shelf.typeOverride || cfg.fallbackType
+                  )
+                )
+              : [],
+        }));
+
+        const nextExplore =
+          exploreRes?.status === 'fulfilled'
+            ? (exploreRes.value.results || []).map((x) =>
+                normalizeItem(cfg.isAnime ? { ...x, isAnime: true } : x, cfg.fallbackType)
               )
-            ),
-          }))
-        );
-        setExploreGrid(
-          (exploreRes.results || []).map((x) =>
-            normalizeItem(cfg.isAnime ? { ...x, isAnime: true } : x, cfg.fallbackType)
-          )
-        );
+            : [];
+
+        setRows(nextRows);
+        setExploreGrid(nextExplore);
+
+        catalogSnapshots.set(kind, {
+          heroSlides: slides,
+          ranked: rankedItems,
+          rows: nextRows,
+          exploreGrid: nextExplore,
+        });
       } catch {
-        // Graceful fallback
+        setHeroLoading(false);
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setHeroLoading(false);
+          setRowsLoading(false);
+        }
       }
     }
 
@@ -131,27 +172,28 @@ export default function CatalogPage({ kind = 'movie' }) {
 
   return (
     <div className="min-h-screen bg-[#0f1014]">
-      <HeroBanner slides={heroSlides} loading={loading} />
+      <HeroBanner slides={heroSlides} loading={heroLoading} />
 
       <div className="relative z-20 -mt-6 space-y-2">
         <RankedRow
           title={cfg.rankedTitle}
           items={ranked}
-          loading={loading}
+          loading={heroLoading}
           viewAllTo={`/category/${encodeURIComponent(cfg.rankedSlug)}`}
         />
 
-        {rows.map((row) => (
-          <ContentRow
-            key={row.title}
-            title={row.title}
-            items={row.items}
-            loading={loading}
-            viewAllTo={`/category/${encodeURIComponent(row.slug)}`}
-          />
-        ))}
+        {(rows.length ? rows : cfg.shelves.map((s) => ({ title: s.title, slug: s.slug, items: [] }))).map(
+          (row) => (
+            <ContentRow
+              key={row.title}
+              title={row.title}
+              items={row.items}
+              loading={rowsLoading}
+              viewAllTo={`/category/${encodeURIComponent(row.slug)}`}
+            />
+          )
+        )}
 
-        {/* Explore Grid Section matching bottom of bingr.one/movies, /tv, /anime */}
         {exploreGrid.length > 0 && (
           <section className="px-4 pt-6 sm:px-8 lg:pl-[108px] lg:pr-12">
             <div className="mb-4 flex items-center justify-between">

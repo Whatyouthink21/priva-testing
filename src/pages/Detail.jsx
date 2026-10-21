@@ -36,6 +36,7 @@ export default function Detail({ type = 'movie' }) {
   const { toast } = useToast();
 
   const [detail, setDetail] = useState(null);
+  const [logoLoadedUrl, setLogoLoadedUrl] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedSeason, setSelectedSeason] = useState(1);
   const [episodes, setEpisodes] = useState([]);
@@ -57,6 +58,7 @@ export default function Detail({ type = 'movie' }) {
     if (!numericId) return undefined;
     let cancelled = false;
     setLoading(true);
+    setLogoLoadedUrl(null);
     setEpisodes([]);
     setEpQuery('');
 
@@ -67,6 +69,17 @@ export default function Detail({ type = 'movie' }) {
         setDetail(data);
         const name = titleOf(data);
         document.title = `${name} · Priva`;
+
+        const logoPath = pickBestLogo(data.images);
+        if (logoPath) {
+          const url = IMG.logo(logoPath, 'w500');
+          const probe = new Image();
+          probe.onload = () => {
+            if (!cancelled) setLogoLoadedUrl(url);
+          };
+          probe.src = url;
+        }
+
         if (type === 'tv') {
           const validSeasons = (data.seasons || []).filter((s) => s.season_number > 0);
           const initialSeason =
@@ -115,7 +128,7 @@ export default function Detail({ type = 'movie' }) {
           <div className="skeleton h-full w-full opacity-40" />
           <div className="hero-gradient-mask absolute inset-0" />
           <div className="absolute bottom-14 left-4 max-w-xl space-y-4 lg:left-[108px]">
-            <div className="skeleton h-16 w-72 rounded-xl" />
+            <div className="skeleton h-14 w-72 rounded-xl" />
             <div className="skeleton h-4 w-64 rounded" />
             <div className="skeleton h-20 w-full rounded-lg" />
             <div className="flex gap-3">
@@ -150,7 +163,6 @@ export default function Detail({ type = 'movie' }) {
   const year = yearOf(detail);
   const score = formatScore(detail.vote_average);
   const cert = extractCertification(detail, type);
-  const logoPath = pickBestLogo(detail.images);
   const anime = isAnimeItem(detail);
   const normalizedSelf = normalizeItem(detail, type);
   const saved = isInList(normalizedSelf);
@@ -205,21 +217,24 @@ export default function Detail({ type = 'movie' }) {
 
   return (
     <div className="min-h-screen bg-[#0f1014] pb-12">
-      {/* Full-Bleed Sticky Backdrop Hero matching bingr.one/movie/:id & /tv/:id */}
+      {/* Full-Bleed Crisp HD Backdrop Hero */}
       <section className="relative min-h-[76vh] w-full overflow-hidden lg:min-h-[84vh]">
         <div className="absolute inset-0">
           {detail.backdrop_path ? (
             <img
-              src={IMG.original(detail.backdrop_path)}
+              src={IMG.backdrop(detail.backdrop_path, 'w1280')}
               alt={title}
+              decoding="async"
+              fetchpriority="high"
               className="h-full w-full object-cover object-top"
             />
           ) : (
             detail.poster_path && (
               <img
-                src={IMG.poster(detail.poster_path, 'w780')}
+                src={IMG.poster(detail.poster_path, 'w500')}
                 alt={title}
-                className="h-full w-full object-cover opacity-50 blur-sm"
+                decoding="async"
+                className="h-full w-full object-cover opacity-50"
               />
             )
           )}
@@ -229,11 +244,12 @@ export default function Detail({ type = 'movie' }) {
 
         <div className="relative z-10 flex min-h-[76vh] flex-col justify-end px-4 pb-10 pt-24 sm:px-8 lg:min-h-[84vh] lg:pb-12 lg:pl-[108px] lg:pr-12">
           <div className="max-w-[600px] animate-hero-in">
-            {logoPath ? (
+            {logoLoadedUrl ? (
               <img
-                src={IMG.logo(logoPath, 'w500')}
+                src={logoLoadedUrl}
                 alt={title}
-                className="mb-5 max-h-[88px] w-auto max-w-[330px] object-contain object-left drop-shadow-[0_10px_28px_rgba(0,0,0,0.85)] sm:max-h-[116px] sm:max-w-[420px]"
+                decoding="async"
+                className="mb-5 max-h-[88px] w-auto max-w-[330px] object-contain object-left drop-shadow-[0_10px_28px_rgba(0,0,0,0.85)] sm:max-h-[112px] sm:max-w-[420px]"
               />
             ) : (
               <h1 className="mb-4 font-display text-[34px] font-extrabold leading-[1.06] tracking-[-0.03em] text-white sm:text-[48px]">
@@ -241,7 +257,6 @@ export default function Detail({ type = 'movie' }) {
               </h1>
             )}
 
-            {/* Bullet-separated metadata line matching bingr.one: 8.0 • 2021 • U/A 16+ • 6 Seasons */}
             <div className="mb-3.5 flex flex-wrap items-center gap-2 text-[14px] font-bold text-[#e1e6f0]">
               {metaItems.map((item, idx) => (
                 <span key={`${item}-${idx}`} className="inline-flex items-center gap-2">
@@ -265,7 +280,6 @@ export default function Detail({ type = 'movie' }) {
               </p>
             )}
 
-            {/* Pipe-separated Clickable Genres matching bingr.one: Action | Fantasy */}
             {detail.genres?.length > 0 && (
               <div className="mb-6 flex flex-wrap items-center gap-2 text-[13.5px] font-semibold text-white">
                 {detail.genres.map((g, idx) => (
@@ -273,7 +287,7 @@ export default function Detail({ type = 'movie' }) {
                     {idx > 0 && <span className="text-white/30">|</span>}
                     <Link
                       to={`/discover/${type}?genre=${g.id}&label=${encodeURIComponent(g.name)}`}
-                      className="transition hover:text-blue-400"
+                      className="transition-colors hover:text-blue-400"
                     >
                       {g.name}
                     </Link>
@@ -282,7 +296,6 @@ export default function Detail({ type = 'movie' }) {
               </div>
             )}
 
-            {/* Watch Now + Watchlist + Trailer + Download Actions */}
             <div className="flex flex-wrap items-center gap-3">
               <button
                 type="button"
@@ -349,9 +362,7 @@ export default function Detail({ type = 'movie' }) {
         </div>
       </section>
 
-      {/* ================================================================== */}
-      {/* EPISODES LIST (TV & Anime) matching bingr.one/tv/:id               */}
-      {/* ================================================================== */}
+      {/* EPISODES LIST (TV & Anime) */}
       {type === 'tv' && (
         <section className="px-4 pt-6 sm:px-8 lg:pl-[108px] lg:pr-12">
           <div className="mb-4 flex flex-col justify-between gap-4 border-b border-white/[0.08] pb-4 sm:flex-row sm:items-center">
@@ -363,7 +374,7 @@ export default function Detail({ type = 'movie' }) {
                     key={s.id || s.season_number}
                     type="button"
                     onClick={() => setSelectedSeason(s.season_number)}
-                    className={`shrink-0 rounded-lg px-3.5 py-1.5 text-[13px] font-semibold transition ${
+                    className={`shrink-0 rounded-lg px-3.5 py-1.5 text-[13px] font-semibold transition-colors ${
                       selectedSeason === s.season_number
                         ? 'bg-white text-[#0f1014]'
                         : 'bg-[#16181f] text-[#8f98b2] hover:text-white'
@@ -409,23 +420,23 @@ export default function Detail({ type = 'movie' }) {
                 return (
                   <div
                     key={ep.id || ep.episode_number}
-                    className={`group flex flex-col gap-4 rounded-xl p-3 transition duration-200 sm:flex-row sm:items-center ${
+                    className={`group flex flex-col gap-4 rounded-xl p-3 transition-colors duration-150 sm:flex-row sm:items-center ${
                       isActiveEp
                         ? 'bg-[#191d2b] ring-1 ring-blue-500/40'
                         : 'hover:bg-[#16181f]'
                     }`}
                   >
-                    {/* 16:9 Episode Still Thumbnail */}
                     <Link
                       to={epWatchUrl}
                       className="relative aspect-video w-full shrink-0 overflow-hidden rounded-[8px] bg-[#16181f] sm:w-[236px]"
                     >
                       {ep.still_path || detail.backdrop_path ? (
                         <img
-                          src={IMG.backdrop(ep.still_path || detail.backdrop_path, 'w780')}
+                          src={IMG.still(ep.still_path || detail.backdrop_path, 'w500')}
                           alt={ep.name}
                           loading="lazy"
-                          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          decoding="async"
+                          className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
                         />
                       ) : (
                         <div className="grid h-full w-full place-items-center text-white/30">
@@ -433,7 +444,7 @@ export default function Detail({ type = 'movie' }) {
                         </div>
                       )}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent" />
-                      <span className="absolute bottom-2.5 left-3 grid h-8 w-8 place-items-center rounded-full bg-black/70 text-white backdrop-blur transition group-hover:bg-white group-hover:text-[#0f1014]">
+                      <span className="absolute bottom-2.5 left-3 grid h-8 w-8 place-items-center rounded-full bg-black/70 text-white transition-colors group-hover:bg-white group-hover:text-[#0f1014]">
                         <Play size={13} className="translate-x-[1px] fill-current" />
                       </span>
                       {ep.runtime > 0 && (
@@ -451,7 +462,6 @@ export default function Detail({ type = 'movie' }) {
                       )}
                     </Link>
 
-                    {/* Episode Title, Meta & Overview */}
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-3">
                         <Link to={epWatchUrl} className="group/title min-w-0">
@@ -477,13 +487,13 @@ export default function Detail({ type = 'movie' }) {
                             }
                             title={`Download S${selectedSeason} E${ep.episode_number}`}
                             aria-label={`Download Episode ${ep.episode_number}`}
-                            className="grid h-9 w-9 place-items-center rounded-lg bg-white/[0.06] text-[#cbd5e1] transition hover:bg-white/[0.14] hover:text-white"
+                            className="grid h-9 w-9 place-items-center rounded-lg bg-white/[0.06] text-[#cbd5e1] transition-colors hover:bg-white/[0.14] hover:text-white"
                           >
                             <Download size={15} />
                           </button>
                           <Link
                             to={epWatchUrl}
-                            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-white/[0.1] px-3.5 text-[12.5px] font-bold text-white transition hover:bg-white hover:text-[#0f1014]"
+                            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-white/[0.1] px-3.5 text-[12.5px] font-bold text-white transition-colors hover:bg-white hover:text-[#0f1014]"
                           >
                             <Play size={12} className="fill-current" />
                             <span>Play</span>
@@ -505,9 +515,7 @@ export default function Detail({ type = 'movie' }) {
         </section>
       )}
 
-      {/* ================================================================== */}
-      {/* ACTORS ROW matching bingr.one/movie/:id                            */}
-      {/* ================================================================== */}
+      {/* ACTORS ROW */}
       {cast.length > 0 && (
         <section className="group/cast relative pt-10">
           <div className="mb-4 flex items-center justify-between px-4 sm:px-8 lg:pl-[108px] lg:pr-12">
@@ -546,12 +554,13 @@ export default function Detail({ type = 'movie' }) {
                 to={`/person/${person.id}`}
                 className="group w-[118px] shrink-0 text-center sm:w-[132px]"
               >
-                <div className="mx-auto aspect-square w-[104px] overflow-hidden rounded-full bg-[#16181f] ring-1 ring-white/[0.1] transition-transform duration-300 group-hover:scale-105 group-hover:ring-white/30 sm:w-[116px]">
+                <div className="mx-auto aspect-square w-[104px] overflow-hidden rounded-full bg-[#16181f] ring-1 ring-white/[0.1] transition-transform duration-200 group-hover:scale-105 group-hover:ring-white/30 sm:w-[116px]">
                   {person.profile_path ? (
                     <img
                       src={IMG.profile(person.profile_path)}
                       alt={person.name}
                       loading="lazy"
+                      decoding="async"
                       className="h-full w-full object-cover"
                     />
                   ) : (
@@ -572,9 +581,7 @@ export default function Detail({ type = 'movie' }) {
         </section>
       )}
 
-      {/* ================================================================== */}
-      {/* MORE LIKE THIS SECTION                                             */}
-      {/* ================================================================== */}
+      {/* MORE LIKE THIS SECTION */}
       {related.length > 0 && (
         <section className="px-4 pt-10 sm:px-8 lg:pl-[108px] lg:pr-12">
           <h2 className="mb-4 font-display text-[20px] font-bold text-white">More Like This</h2>
