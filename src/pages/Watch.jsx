@@ -24,7 +24,7 @@ import {
   titleOf,
   yearOf,
 } from '../lib/tmdb';
-import { buildStreamUrl, parsePlayerMessage, SERVERS } from '../lib/sources';
+import { buildAnimeUrl, buildStreamUrl, parsePlayerMessage, SERVERS } from '../lib/sources';
 import { useLibrary } from '../context/LibraryContext';
 import { useToast } from '../context/ToastContext';
 
@@ -52,6 +52,9 @@ export default function Watch({ type: propType = 'movie' }) {
   const episode = Number(params.episode || searchParams.get('episode') || 1);
 
   const [serverId, setServerId] = useState(() => Number(settings.defaultServer) || 1);
+  const [animeLanguage, setAnimeLanguage] = useState('sub');
+  const [malId, setMalId] = useState('');
+  const [animeEpisode, setAnimeEpisode] = useState(episode);
   const [detail, setDetail] = useState(null);
   const [episodes, setEpisodes] = useState([]);
   const [selectedSeason, setSelectedSeason] = useState(season);
@@ -60,6 +63,7 @@ export default function Watch({ type: propType = 'movie' }) {
   const [downloadOpen, setDownloadOpen] = useState(false);
 
   // Capture initial resume time once per title/episode load so live progress updates don't reload iframe
+  const playerRef = useRef(null);
   const initialResumeRef = useRef(0);
   const detailRef = useRef(null);
   const currentEpRef = useRef(null);
@@ -164,6 +168,9 @@ export default function Watch({ type: propType = 'movie' }) {
   // Listen to real-time playback events from all 3 streaming servers via postMessage
   useEffect(() => {
     const onMessage = (event) => {
+      const frame = playerRef.current;
+      if (!frame || event.source !== frame.contentWindow) return;
+      try { if (event.origin !== new URL(frame.src).origin) return; } catch { return; }
       const parsed = parsePlayerMessage(event.data);
       if (!parsed || !detailRef.current) return;
 
@@ -201,15 +208,28 @@ export default function Watch({ type: propType = 'movie' }) {
     return () => window.removeEventListener('message', onMessage);
   }, [numericId, type, season, episode, episodes, settings.autoplayNext, navigate, saveWatchProgress]);
 
+  const anime = detail && isAnimeItem(detail);
+  useEffect(() => {
+    setMalId('');
+    setAnimeEpisode(episode);
+    if (!anime || (type === 'tv' && season !== 1)) return;
+    const controller = new AbortController();
+    fetch(`https://api.ani.zip/mappings?tmdb_id=${numericId}`, { signal: controller.signal })
+      .then((r) => { if (!r.ok) throw new Error('Mapping unavailable'); return r.json(); })
+      .then((data) => { if (data.mappings?.mal_id) setMalId(String(data.mappings.mal_id)); })
+      .catch(() => {});
+    return () => controller.abort();
+  }, [anime, numericId, type, season, episode]);
+
   const streamSrc = useMemo(
     () =>
-      buildStreamUrl(serverId, type, numericId, {
+      serverId === 'anime' ? buildAnimeUrl(malId, animeEpisode, animeLanguage) : buildStreamUrl(serverId, type, numericId, {
         season,
         episode,
         startAt: initialResumeRef.current,
         autoplayNext: Boolean(settings.autoplayNext),
       }),
-    [serverId, type, numericId, season, episode, settings.autoplayNext]
+    [serverId, type, numericId, season, episode, settings.autoplayNext, malId, animeEpisode, animeLanguage]
   );
 
   const title = detail ? titleOf(detail) : 'Loading...';
@@ -270,10 +290,10 @@ export default function Watch({ type: propType = 'movie' }) {
           </div>
         </div>
 
-        {/* Strictly Numbered Server Switcher: Server 1, Server 2, Server 3 */}
+        {/* Streaming sources */}
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1 rounded-xl bg-[#16181f] p-1 ring-1 ring-white/[0.08]">
-            {SERVERS.map((srv) => (
+          <div className="flex flex-wrap items-center gap-1 rounded-xl bg-[#16181f] p-1 ring-1 ring-white/[0.08]">
+            {[...SERVERS, ...(anime ? [{ id: 'anime', label: 'ANIME' }] : [])].map((srv) => (
               <button
                 key={srv.id}
                 type="button"
@@ -288,10 +308,19 @@ export default function Watch({ type: propType = 'movie' }) {
                 }`}
               >
                 {srv.label}
+                {srv.tags && <span className="mt-0.5 block text-[9px] font-medium opacity-75">{srv.tags.join(' · ')}</span>}
               </button>
             ))}
           </div>
 
+          {serverId === 'anime' && (
+            <div className="flex flex-wrap items-center gap-2 text-xs text-[#8f98b2]">
+              <label>Audio <select aria-label="Anime language" value={animeLanguage} onChange={(e) => { setAnimeLanguage(e.target.value); setFrameLoading(true); }} className="rounded-lg bg-[#16181f] p-2 text-white"><option value="sub">Sub</option><option value="dub">Dub</option></select></label>
+              <label>MAL ID <input aria-label="MyAnimeList ID" type="number" min="1" value={malId} onChange={(e) => { setMalId(e.target.value); setFrameLoading(true); }} className="w-24 rounded-lg bg-[#16181f] p-2 text-white" /></label>
+              <label>Anime episode <input aria-label="Anime episode" type="number" min="1" value={animeEpisode} onChange={(e) => { setAnimeEpisode(Math.max(1, Number(e.target.value))); setFrameLoading(true); }} className="w-16 rounded-lg bg-[#16181f] p-2 text-white" /></label>
+              <span>Check the MAL ID for this season. Sub/dub availability varies.</span>
+            </div>
+          )}
           <button
             type="button"
             onClick={() => setDownloadOpen(true)}
@@ -322,17 +351,19 @@ export default function Watch({ type: propType = 'movie' }) {
 
       {/* Main 16:9 Cinema Stage */}
       <div className="relative h-[56vh] w-full bg-black sm:h-[74vh] lg:h-[83vh]">
-        {frameLoading && (
+        {frameLoading && streamSrc && (
           <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-black/80">
             <Loader2 size={32} className="animate-spin text-blue-500" />
             <p className="text-[13px] font-medium text-[#8f98b2]">
-              Connecting to Server {serverId}...
+              Connecting to {serverId === 'anime' ? 'ANIME' : `Server ${serverId}`}...
             </p>
           </div>
         )}
 
-        <iframe
-          key={`${serverId}-${type}-${numericId}-${season}-${episode}`}
+        {!streamSrc && <div className="grid h-full place-items-center p-6 text-center text-[#8f98b2]">Enter the MyAnimeList ID for this anime season above to load ANIME. You can also use any numbered server.</div>}
+        {streamSrc && <iframe
+          ref={playerRef}
+          key={streamSrc}
           src={streamSrc}
           title={title}
           onLoad={() => setFrameLoading(false)}
@@ -340,7 +371,7 @@ export default function Watch({ type: propType = 'movie' }) {
           allowFullScreen
           referrerPolicy="origin"
           className="h-full w-full border-0"
-        />
+        />}
       </div>
 
       {/* Info & Up Next Section matching bingr.one/watch/... */}

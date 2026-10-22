@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import {
+  Megaphone,
   Clapperboard,
   Compass,
   Home,
@@ -105,6 +106,10 @@ export default function Sidebar() {
 
           {/* Center Navigation Icons + Sliding Labels */}
           <nav className="my-auto flex flex-col gap-1.5 px-4">
+            <NavLink to="/announcements" aria-label="Announcements" className={({ isActive }) => `flex h-[48px] items-center gap-4 rounded-xl px-[18px] ${isActive ? 'text-white' : 'text-[#8f98b2] hover:text-white'}`}>
+              <Megaphone size={22} className="shrink-0" />
+              <span className={`text-[15px] font-semibold transition-opacity ${expanded ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>Announcements</span>
+            </NavLink>
             <NavLink
               to="/space"
               className={() =>
@@ -208,6 +213,7 @@ export default function Sidebar() {
       <header className="fixed inset-x-0 top-0 z-40 flex h-14 items-center justify-between bg-gradient-to-b from-[#0f1014]/95 via-[#0f1014]/65 to-transparent px-4 lg:hidden">
         <Logo size="sm" />
         <div className="flex items-center gap-2">
+          <Link to="/announcements" aria-label="Announcements" className="rounded-full bg-white/10 p-2 text-white"><Megaphone size={18} /></Link>
           <Link
             to="/categories"
             className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-md"

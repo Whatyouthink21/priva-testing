@@ -25,3 +25,11 @@ npm run dev
 ```bash
 npm run build
 ```
+
+### v2.1 maintenance
+
+- Edit release notes in `src/pages/Announcements.jsx`, under `EDIT ANNOUNCEMENTS HERE`.
+- Server order and URL builders live in `src/lib/sources.js`. Server 1 is the former Server 3 (Bingr); Servers 3/4 retain the former Servers 1/2.
+- MegaPlay uses MAL IDs, not TMDB IDs. The player attempts an ani.zip lookup for films/first seasons. Later seasons or missing mappings require the season-specific MAL ID and anime episode in the player controls. Language availability depends on MegaPlay.
+- Nxsha uses its title page and Frost its watch page. Verify iframe permissions and episode selection on the deployed site; these sources did not supply a verified embed API during this update.
+- The ad notice stores its last-display time locally in the browser and checks every 30 seconds while the tab is visible. Clearing site storage resets the reminder.

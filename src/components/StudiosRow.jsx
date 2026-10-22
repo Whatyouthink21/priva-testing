@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { STUDIOS } from '../lib/catalog';
@@ -74,6 +74,7 @@ export default function StudiosRow({ grid = false }) {
 }
 
 function StudioCard({ studio }) {
+  const [logoFailed, setLogoFailed] = useState(false);
   return (
     <Link
       to={`/discover/movie?studio=${studio.slug}`}
@@ -90,9 +91,9 @@ function StudioCard({ studio }) {
         className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100"
       />
 
-      <span className="relative z-10 font-display text-[17px] font-black tracking-[0.06em] text-white drop-shadow-[0_4px_16px_rgba(0,0,0,0.85)] transition-transform duration-300 group-hover:scale-110 sm:text-[19px]">
+      {studio.logo && !logoFailed ? <img src={studio.logo} alt={studio.name} loading="lazy" onError={() => setLogoFailed(true)} className="relative z-10 h-16 w-28 rounded-lg object-contain transition-transform duration-300 group-hover:scale-110 sm:h-20" /> : <span className="relative z-10 font-display text-[17px] font-black tracking-[0.06em] text-white drop-shadow-[0_4px_16px_rgba(0,0,0,0.85)] transition-transform duration-300 group-hover:scale-110 sm:text-[19px]">
         {studio.wordmark}
-      </span>
+      </span>}
       <span className="relative z-10 mt-1 text-[10.5px] font-medium tracking-wide text-white/55 opacity-0 transition-all duration-300 group-hover:opacity-100">
         {studio.tagline}
       </span>

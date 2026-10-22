@@ -14,6 +14,8 @@ import Detail from './pages/Detail';
 import Watch from './pages/Watch';
 import Person from './pages/Person';
 import Help from './pages/Help';
+import Announcements from './pages/Announcements';
+import AdNotice from './components/AdNotice';
 import NotFound from './pages/NotFound';
 
 export default function App() {
@@ -31,6 +33,7 @@ export default function App() {
 
   return (
     <div className="flex min-h-screen flex-col bg-[#0f1014] text-[#e1e6f0]">
+      <AdNotice />
       {!hideChrome && <Sidebar />}
 
       <main className="flex-1">
@@ -56,6 +59,7 @@ export default function App() {
               <Route path="/discover" element={<Discover mode="discover" />} />
               <Route path="/discover/:media" element={<Discover mode="discover" />} />
 
+              <Route path="/announcements" element={<Announcements />} />
               <Route path="/space" element={<MySpace />} />
               <Route path="/my-space" element={<Navigate to="/space" replace />} />
               <Route path="/my-list" element={<Navigate to="/space" replace />} />
