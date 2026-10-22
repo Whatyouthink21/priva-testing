@@ -15,7 +15,7 @@ function withQuery(base, params = {}) {
   return qs ? `${base}?${qs}` : base;
 }
 
-export const SERVERS = [
+const LEGACY_SERVERS = [
   {
     id: 1,
     label: 'Server 1',
@@ -66,6 +66,25 @@ export const SERVERS = [
   },
 ];
 
+// Server order for v2.1. The former Server 3 is now the default Server 1.
+export const SERVERS = [
+  { ...LEGACY_SERVERS[2], id: 1, label: 'Server 1', tags: ['Fast', 'High quality'] },
+  { id: 2, label: 'Server 2',
+    buildMovieUrl: (id) => `https://nxsha.space/movie/${id}`,
+    buildTvUrl: (id, season = 1, episode = 1) => `https://nxsha.space/tv/${id}?season=${season}&episode=${episode}` },
+  { ...LEGACY_SERVERS[0], id: 3, label: 'Server 3' },
+  { ...LEGACY_SERVERS[1], id: 4, label: 'Server 4' },
+  { id: 5, label: 'Server 5',
+    buildMovieUrl: (id) => `https://tgfrost.lovable.app/watch/movie/${id}`,
+    buildTvUrl: (id, season = 1, episode = 1) => `https://tgfrost.lovable.app/watch/tv/${id}/${season}/${episode}` },
+];
+
+// MegaPlay uses MAL IDs, NOT the TMDB IDs used by the numbered servers.
+export function buildAnimeUrl(malId, episode = 1, language = 'sub') {
+  if (!/^\d+$/.test(String(malId)) || Number(malId) <= 0) return '';
+  return `https://megaplay.buzz/stream/mal/${malId}/${episode}/${language === 'dub' ? 'dub' : 'sub'}`;
+}
+
 export function buildStreamUrl(serverId, type, id, opts = {}) {
   const srv = SERVERS.find((s) => s.id === Number(serverId)) || SERVERS[0];
   const mediaType = type === 'movie' ? 'movie' : 'tv';
@@ -110,10 +129,10 @@ export function buildDownloadUrl(sourceId, type, id, { season = 1, episode = 1 }
 }
 
 /**
- * Parse live watch progress events from all 3 streaming servers:
- * - Server 1 JSON postMessage: { id, type, progress, timestamp, duration, season, episode }
- * - Server 2 postMessage: { type: "TGFLIX_EVENT", event, currentTime, duration, paused }
- * - Server 3 postMessage: { type: "PLAYER_EVENT", data: { event: "playerstatus", currentTime, duration, playing } }
+ * Parse live watch progress events from supported streaming servers:
+ * - Server 3 JSON postMessage: { id, type, progress, timestamp, duration, season, episode }
+ * - Server 4 postMessage: { type: "TGFLIX_EVENT", event, currentTime, duration, paused }
+ * - Server 1 postMessage: { type: "PLAYER_EVENT", data: { event: "playerstatus", currentTime, duration, playing } }
  */
 export function parsePlayerMessage(raw) {
   let payload = raw;

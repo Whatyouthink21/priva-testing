@@ -3,6 +3,7 @@ import { api, normalizeItem } from './tmdb';
 export const STUDIOS = [
   {
     slug: 'disney',
+    logo: 'https://image.tmdb.org/t/p/w185/5eZ872CghnHFLB1j8grszbrx0dx.png',
     name: 'Disney+',
     providerId: '337',
     companyId: '2',
@@ -13,6 +14,7 @@ export const STUDIOS = [
   },
   {
     slug: 'hbomax',
+    logo: 'https://image.tmdb.org/t/p/w185/skypuy7SXuugIQeYg0IglmzoKaS.png',
     name: 'HBO Max',
     providerId: '1899',
     networkId: '49',
@@ -23,6 +25,7 @@ export const STUDIOS = [
   },
   {
     slug: 'netflix',
+    logo: 'https://image.tmdb.org/t/p/w185/rK1KljqmbvO9HQa1PBFLILWah72.png',
     name: 'Netflix',
     providerId: '8',
     networkId: '213',
@@ -33,6 +36,7 @@ export const STUDIOS = [
   },
   {
     slug: 'prime',
+    logo: 'https://image.tmdb.org/t/p/w185/gMZdpavHmxFNnLpMHwVxfqeux2g.png',
     name: 'Prime Video',
     providerId: '9',
     networkId: '1024',
@@ -43,6 +47,7 @@ export const STUDIOS = [
   },
   {
     slug: 'appletv',
+    logo: 'https://image.tmdb.org/t/p/w185/9icYBfYFcwgCbky5VdGUIKJ4C5i.png',
     name: 'Apple TV+',
     providerId: '350',
     networkId: '2552',
@@ -53,6 +58,7 @@ export const STUDIOS = [
   },
   {
     slug: 'paramount',
+    logo: 'https://image.tmdb.org/t/p/w185/4N4BMd0Mm0kHAmF7RZgL5lW3cwc.png',
     name: 'Paramount+',
     providerId: '531',
     companyId: '4',
@@ -63,6 +69,7 @@ export const STUDIOS = [
   },
   {
     slug: 'hulu',
+    logo: 'https://image.tmdb.org/t/p/w185/44uAnmSqvA4yBOdbPWN8YgQHjWm.png',
     name: 'Hulu',
     providerId: '15',
     networkId: '453',
@@ -73,6 +80,7 @@ export const STUDIOS = [
   },
   {
     slug: 'peacock',
+    logo: 'https://image.tmdb.org/t/p/w185/a1UIdq5BrkcAxnxcUhFsNbXnxeu.png',
     name: 'Peacock',
     providerId: '386',
     companyId: '33',
