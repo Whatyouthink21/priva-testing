@@ -82,10 +82,23 @@ export const SERVERS = [
   },
 ];
 
-// MegaPlay uses MAL IDs, NOT the TMDB IDs used by the numbered servers.
+// Anime embeds use external anime IDs (MAL/AniList), never TMDB IDs.
+const validAnimeId = (id) => /^\d+$/.test(String(id)) && Number(id) > 0;
+const audioPath = (language) => language === 'dub' ? 'dub' : 'sub';
 export function buildAnimeUrl(malId, episode = 1, language = 'sub') {
-  if (!/^\d+$/.test(String(malId)) || Number(malId) <= 0) return '';
-  return `https://megaplay.buzz/stream/mal/${malId}/${episode}/${language === 'dub' ? 'dub' : 'sub'}`;
+  if (!validAnimeId(malId)) return '';
+  return `https://megaplay.buzz/stream/mal/${malId}/${episode}/${audioPath(language)}`;
+}
+export function buildShonenUrl(anilistId, episode = 1, language = 'sub', parentOrigin = '') {
+  if (!validAnimeId(anilistId)) return '';
+  const params = new URLSearchParams({ language: audioPath(language) });
+  if (parentOrigin) params.set('parentOrigin', parentOrigin);
+  return `https://shonen.to/embed/anilist/${anilistId}/${episode}?${params}`;
+}
+export function buildTryEmbedUrl(id, episode = 1, language = 'sub', idType = 'anilist') {
+  if (!validAnimeId(id)) return '';
+  const path = idType === 'mal' ? `mal/${id}` : id;
+  return `https://tryembed.us.cc/embed/anime/${path}/${episode}/${audioPath(language)}`;
 }
 
 export function buildStreamUrl(serverId, type, id, opts = {}) {

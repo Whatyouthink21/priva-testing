@@ -31,6 +31,12 @@ export function dateString(date) {
   return `${date.year}-${String(date.month).padStart(2, '0')}-${String(date.day).padStart(2, '0')}`;
 }
 
+export async function getAniListIdByMal(malId) {
+  if (!/^\d+$/.test(String(malId))) return null;
+  const data = await anilistRequest(`query ($mal: Int) { Media(idMal: $mal, type: ANIME) { id } }`, { mal: Number(malId) });
+  return data.Media?.id || null;
+}
+
 export async function getAnimeRelations(malId) {
   return (await anilistRequest(`query ($mal: Int) {
     Media(idMal: $mal, type: ANIME) {
