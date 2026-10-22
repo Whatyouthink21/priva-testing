@@ -80,7 +80,7 @@ export default function Help() {
               </span>
             </div>
             <p className="mt-2 text-[13.5px] leading-relaxed text-[#8f98b2]">
-              Switch between Servers 1–5 and ANIME 1–4 from the player top bar. Anime 1 is ZokoAnime, Anime 2 is MegaPlay, Anime 3 is TryEmbed, and Anime 4 is Vidnest. Track availability varies by title; Vidnest offers Hindi where available.
+              Switch between Servers 1–6 and ANIME 1–4 from the player top bar. Anime 1 is ZokoAnime, Anime 2 is MegaPlay, Anime 3 is TryEmbed, and Anime 4 is Vidnest. Track availability varies by title; Vidnest offers Hindi where available.
             </p>
           </div>
 
