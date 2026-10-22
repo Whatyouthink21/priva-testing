@@ -100,7 +100,7 @@ export const SERVERS = [
         start: opts.startAt > 15 ? Math.floor(opts.startAt) : undefined,
         title: opts.title,
         year: opts.year,
-        providers: 'vega:castle',
+        providers: 'vega:castle,vega:autoEmbed,vega:movieBoxWeb',
       }),
     buildTvUrl: (id, season = 1, episode = 1, opts = {}) =>
       withQuery(`https://priva-embed.onrender.com/embed/tv/${id}/${season}/${episode}`, {
@@ -109,7 +109,7 @@ export const SERVERS = [
         start: opts.startAt > 15 ? Math.floor(opts.startAt) : undefined,
         title: opts.title,
         year: opts.year,
-        providers: 'vega:castle',
+        providers: 'vega:castle,vega:autoEmbed,vega:movieBoxWeb',
         subs: 'en',
       }),
   },
