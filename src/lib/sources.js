@@ -80,6 +80,15 @@ export const SERVERS = [
         autoplay: 1, muted: 0, t: startAt > 0 ? Math.floor(startAt) : undefined,
       }),
   },
+  { id: 5, label: 'Server 5',
+    buildMovieUrl: (id, { startAt } = {}) => withQuery(`https://vidnest.fun/movie/${id}`, {
+      startAt: startAt > 0 ? Math.floor(startAt) : undefined,
+    }),
+    buildTvUrl: (id, season = 1, episode = 1, { startAt } = {}) =>
+      withQuery(`https://vidnest.fun/tv/${id}/${season}/${episode}`, {
+        startAt: startAt > 0 ? Math.floor(startAt) : undefined,
+      }),
+  },
 ];
 
 // Anime embeds use external anime IDs, never TMDB IDs.
@@ -99,6 +108,11 @@ export function buildTryEmbedAnimeUrl(malId, episode = 1, language = 'sub') {
   const track = language === 'dub' ? 'dub' : 'sub';
   const params = new URLSearchParams({ autoplay: 'true', autoSkip: 'true', autoNext: 'false', skin: 'silicon' });
   return `https://tryembed.us.cc/embed/anime/mal/${malId}/${episode}/${track}?${params}`;
+}
+export function buildVidnestAnimeUrl(anilistId, episode = 1, language = 'sub') {
+  if (!validAnimeId(anilistId)) return '';
+  const track = ['dub', 'hindi'].includes(language) ? language : 'sub';
+  return `https://vidnest.fun/anime/${anilistId}/${episode}/${track}`;
 }
 
 export function buildStreamUrl(serverId, type, id, opts = {}) {

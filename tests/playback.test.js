@@ -1,17 +1,19 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { SERVERS, buildStreamUrl, buildZokoAnimeUrl, buildMegaPlayAnimeUrl, buildTryEmbedAnimeUrl, parsePlayerMessage } from '../src/lib/sources.js';
+import { SERVERS, buildStreamUrl, buildZokoAnimeUrl, buildMegaPlayAnimeUrl, buildTryEmbedAnimeUrl, buildVidnestAnimeUrl, parsePlayerMessage } from '../src/lib/sources.js';
 import { resolveAnimeMapping } from '../src/lib/anime.js';
 const rows = JSON.parse(readFileSync(new URL('../public/data/anime-mappings.json', import.meta.url)));
 
-test('v2.2 server lineup and tags', () => {
-  assert.deepEqual(SERVERS.map(s => s.id), [1, 2, 3, 4]);
+test('numbered server lineup and tags', () => {
+  assert.deepEqual(SERVERS.map(s => s.id), [1, 2, 3, 4, 5]);
   assert.deepEqual(SERVERS[0].tags, ['Fast', 'High quality', 'Ad free']);
   assert.deepEqual(SERVERS[3].tags, ['4K', 'Ad free']);
   assert.match(buildStreamUrl(1, 'movie', 550), /bingr.one/);
   assert.match(buildStreamUrl(2, 'movie', 550), /vidstuck.cc/);
   assert.match(buildStreamUrl(3, 'movie', 550), /tgvid.lovable.app/);
+  assert.equal(buildStreamUrl(5, 'movie', 324857), 'https://vidnest.fun/movie/324857');
+  assert.equal(buildStreamUrl(5, 'tv', 94997, {season: 1, episode: 1, startAt: 120}), 'https://vidnest.fun/tv/94997/1/1?startAt=120');
   assert.equal(buildStreamUrl(99, 'movie', 550), buildStreamUrl(1, 'movie', 550));
 });
 test('frameXTV movie/TV embeds and resume timestamp', () => {
@@ -41,6 +43,9 @@ test('episode offsets, ambiguity, and language URLs', () => {
   assert.equal(buildTryEmbedAnimeUrl(21, 7, 'dub'), 'https://tryembed.us.cc/embed/anime/mal/21/7/dub?autoplay=true&autoSkip=true&autoNext=false&skin=silicon');
   assert.equal(buildTryEmbedAnimeUrl(21, 7, 'hsub'), 'https://tryembed.us.cc/embed/anime/mal/21/7/sub?autoplay=true&autoSkip=true&autoNext=false&skin=silicon');
   assert.equal(buildTryEmbedAnimeUrl('', 1), '');
+  assert.equal(buildVidnestAnimeUrl(154587, 1, 'hindi'), 'https://vidnest.fun/anime/154587/1/hindi');
+  assert.equal(buildVidnestAnimeUrl(16498, 2, 'dub'), 'https://vidnest.fun/anime/16498/2/dub');
+  assert.equal(buildVidnestAnimeUrl('', 1), '');
 });
 
 test('continuous anime seasons use absolute episodes and exclude specials', async () => {

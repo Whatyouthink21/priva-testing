@@ -25,7 +25,8 @@ import {
   yearOf,
 } from '../lib/tmdb';
 import { resolveAnimePlayback } from '../lib/animePlayback';
-import { buildZokoAnimeUrl, buildMegaPlayAnimeUrl, buildTryEmbedAnimeUrl, buildStreamUrl, parsePlayerMessage, SERVERS } from '../lib/sources';
+import { getAnimeRelations } from '../lib/anilist';
+import { buildZokoAnimeUrl, buildMegaPlayAnimeUrl, buildTryEmbedAnimeUrl, buildVidnestAnimeUrl, buildStreamUrl, parsePlayerMessage, SERVERS } from '../lib/sources';
 import { useLibrary } from '../context/LibraryContext';
 import { useToast } from '../context/ToastContext';
 
@@ -55,6 +56,7 @@ export default function Watch({ type: propType = 'movie' }) {
   const [serverId, setServerId] = useState(1);
   const [animeLanguage, setAnimeLanguage] = useState('sub');
   const [malId, setMalId] = useState('');
+  const [aniListId, setAniListId] = useState('');
   const [mappingStatus, setMappingStatus] = useState('loading');
   const serverChoiceRef = useRef(null);
   const [animeEpisode, setAnimeEpisode] = useState(episode);
@@ -202,8 +204,8 @@ export default function Watch({ type: propType = 'movie' }) {
         episodeStill: epMeta?.still_path || null,
         episodeName: epMeta?.name || '',
         // Anime providers use MAL-local numbering; keep library progress in TMDB coordinates.
-        season: ['anime1', 'anime2', 'anime3'].includes(serverId) ? season : parsed.season || season,
-        episode: ['anime1', 'anime2', 'anime3'].includes(serverId) ? episode : parsed.episode || episode,
+        season: ['anime1', 'anime2', 'anime3', 'anime4'].includes(serverId) ? season : parsed.season || season,
+        episode: ['anime1', 'anime2', 'anime3', 'anime4'].includes(serverId) ? episode : parsed.episode || episode,
         timestamp: parsed.timestamp,
         duration: parsed.duration,
         progress: parsed.progress,
@@ -252,15 +254,26 @@ export default function Watch({ type: propType = 'movie' }) {
     return () => { cancelled = true; };
   }, [anime, numericId, type, season, episode, detail]);
 
+  useEffect(() => {
+    let cancelled = false;
+    setAniListId('');
+    if (!malId) return undefined;
+    getAnimeRelations(malId)
+      .then((media) => { if (!cancelled) setAniListId(media?.id ? String(media.id) : ''); })
+      .catch(() => { if (!cancelled) setAniListId(''); });
+    return () => { cancelled = true; };
+  }, [malId]);
+
   const streamSrc = useMemo(() => {
     if (serverId === 'anime1') return buildZokoAnimeUrl(malId, animeEpisode, animeLanguage);
     if (serverId === 'anime2') return buildMegaPlayAnimeUrl(malId, animeEpisode, animeLanguage);
     if (serverId === 'anime3') return buildTryEmbedAnimeUrl(malId, animeEpisode, animeLanguage);
+    if (serverId === 'anime4') return buildVidnestAnimeUrl(aniListId, animeEpisode, animeLanguage);
     return buildStreamUrl(serverId, type, numericId, {
       season, episode, startAt: initialResumeRef.current,
       autoplayNext: Boolean(settings.autoplayNext),
     });
-  }, [serverId, type, numericId, season, episode, settings.autoplayNext, malId, animeEpisode, animeLanguage]);
+  }, [serverId, type, numericId, season, episode, settings.autoplayNext, malId, aniListId, animeEpisode, animeLanguage]);
 
   useEffect(() => { setFrameLoading(true); }, [streamSrc]);
 
@@ -325,13 +338,15 @@ export default function Watch({ type: propType = 'movie' }) {
         {/* Streaming sources */}
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex max-w-full shrink-0 flex-nowrap items-center gap-1 overflow-x-auto rounded-xl bg-[#16181f] p-1 ring-1 ring-white/[0.08]">
-            {[...SERVERS, ...(anime ? [{ id: 'anime1', label: 'ANIME 1' }, { id: 'anime2', label: 'ANIME 2' }, { id: 'anime3', label: 'ANIME 3' }] : [])].map((srv) => (
+            {[...SERVERS, ...(anime ? [{ id: 'anime1', label: 'ANIME 1' }, { id: 'anime2', label: 'ANIME 2' }, { id: 'anime3', label: 'ANIME 3' }, { id: 'anime4', label: 'ANIME 4' }] : [])].map((srv) => (
               <button
                 key={srv.id}
                 type="button"
                 onClick={() => {
                   serverChoiceRef.current = titleKey;
                   setServerId(srv.id);
+                  if (srv.id !== 'anime1' && animeLanguage === 'hsub') setAnimeLanguage('sub');
+                  if (srv.id !== 'anime4' && animeLanguage === 'hindi') setAnimeLanguage('sub');
                   setFrameLoading(true);
                 }}
                 className={`whitespace-nowrap rounded-lg px-2.5 py-1.5 text-[12px] font-bold transition ${
@@ -346,9 +361,9 @@ export default function Watch({ type: propType = 'movie' }) {
             ))}
           </div>
 
-          {['anime1', 'anime2', 'anime3'].includes(serverId) && (
+          {['anime1', 'anime2', 'anime3', 'anime4'].includes(serverId) && (
             <div className="flex flex-wrap items-center gap-2 text-xs text-[#8f98b2]">
-              <label>Audio <select aria-label="Anime language" value={animeLanguage} onChange={(e) => { setAnimeLanguage(e.target.value); setFrameLoading(true); }} className="rounded-lg bg-[#16181f] p-2 text-white"><option value="sub">Sub</option>{serverId === 'anime1' && <option value="hsub">Hard-sub</option>}<option value="dub">Dub</option></select></label>
+              <label>Audio <select aria-label="Anime language" value={animeLanguage} onChange={(e) => { setAnimeLanguage(e.target.value); setFrameLoading(true); }} className="rounded-lg bg-[#16181f] p-2 text-white"><option value="sub">Sub</option>{serverId === 'anime1' && <option value="hsub">Hard-sub</option>}{serverId === 'anime4' && <option value="hindi">Hindi</option>}<option value="dub">Dub</option></select></label>
               <label>MAL ID <input disabled={mappingStatus === 'loading'} aria-label="MyAnimeList ID" type="number" min="1" value={malId} onChange={(e) => { setMalId(e.target.value); setFrameLoading(true); }} className="w-24 rounded-lg bg-[#16181f] p-2 text-white" /></label>
               <label>Anime episode <input disabled={mappingStatus === 'loading'} aria-label="Anime episode" type="number" min="1" value={animeEpisode} onChange={(e) => { setAnimeEpisode(Math.max(1, Number(e.target.value))); setFrameLoading(true); }} className="w-16 rounded-lg bg-[#16181f] p-2 text-white" /></label>
             </div>
@@ -387,7 +402,7 @@ export default function Watch({ type: propType = 'movie' }) {
           <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-black/80">
             <Loader2 size={32} className="animate-spin text-blue-500" />
             <p className="text-[13px] font-medium text-[#8f98b2]">
-              Connecting to {serverId === 'anime1' ? 'ANIME 1' : serverId === 'anime2' ? 'ANIME 2' : serverId === 'anime3' ? 'ANIME 3' : `Server ${serverId}`}...
+              Connecting to {serverId === 'anime1' ? 'ANIME 1' : serverId === 'anime2' ? 'ANIME 2' : serverId === 'anime3' ? 'ANIME 3' : serverId === 'anime4' ? 'ANIME 4' : `Server ${serverId}`}...
             </p>
           </div>
         )}

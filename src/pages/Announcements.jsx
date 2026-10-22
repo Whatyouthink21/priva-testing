@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Megaphone, Sparkles } from 'lucide-react';
+import { ExternalLink, Megaphone, ShieldCheck, Sparkles } from 'lucide-react';
 
 // EDIT ANNOUNCEMENTS HERE: update this array or add a new entry at the top.
 const ANNOUNCEMENTS = [
@@ -10,6 +10,7 @@ const ANNOUNCEMENTS = [
     updates: [
       'Movie and TV detail pages now animate the title forward while the description fades away, then start a muted YouTube trailer preview with controls hidden. Home, Movies, and Anime hero banners also play available muted trailer previews.',
       'TryEmbed is now available as ANIME 3 with Sub/Dub and an iframe sandbox that restricts pop-ups and top-level redirects. Ads rendered inside the player may still appear.',
+      'Vidnest is now available as Server 5 for movies and TV, plus ANIME 4 using AniList IDs with Sub, Dub, or Hindi tracks where available.',
     ],
   },
   {
@@ -59,7 +60,8 @@ export default function Announcements() {
   useEffect(() => { document.title = 'Announcements · Priva'; }, []);
   return (
     <div className="min-h-screen px-4 pb-24 pt-20 sm:px-8 lg:pl-[108px] lg:pr-12 lg:pt-12">
-      <div className="max-w-3xl">
+      <div className="mx-auto grid max-w-[1360px] grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="min-w-0 max-w-3xl">
         <Megaphone className="mb-4 text-blue-400" size={30} />
         <h1 className="font-display text-3xl font-extrabold tracking-tight text-white">Announcements</h1>
         <p className="mt-2 text-[#8f98b2]">The latest updates from Priva.</p>
@@ -71,6 +73,33 @@ export default function Announcements() {
             <ul className="mt-6 list-disc space-y-4 pl-5 text-sm leading-relaxed text-[#8f98b2]">{item.updates.map((update) => <li key={update}>{update}</li>)}</ul>
           </article>
         ))}
+      </div>
+
+      <aside className="lg:sticky lg:top-6">
+        <section className="rounded-2xl border border-blue-400/20 bg-gradient-to-br from-blue-950/50 to-[#16181f] p-5 shadow-xl">
+          <div className="mb-3 flex items-center gap-2 text-blue-300">
+            <ShieldCheck size={20} />
+            <h2 className="font-display text-lg font-bold text-white">Ad &amp; Source Notice</h2>
+          </div>
+          <p className="text-sm leading-relaxed text-[#c4ccdf]">
+            Priva itself does not place ads on the site. Third-party streaming sources may show ads or pop-ups.
+          </p>
+          <div className="mt-5 border-t border-white/[0.08] pt-4">
+            <h3 className="text-sm font-bold text-white">Windows · Chrome</h3>
+            <p className="mt-1 text-xs leading-relaxed text-[#8f98b2]">Install AdGuard AdBlocker from the Chrome Web Store.</p>
+            <a href="https://chromewebstore.google.com/detail/adguard-adblocker/bgnkhhnnamicmpeenaelnjfhikgbkllg" target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-2 rounded-lg bg-white/[0.08] px-3 py-2 text-xs font-semibold text-blue-300 transition hover:bg-white/[0.14]">
+              Get AdGuard for Chrome <ExternalLink size={13} />
+            </a>
+          </div>
+          <div className="mt-5 border-t border-white/[0.08] pt-4">
+            <h3 className="text-sm font-bold text-white">Android</h3>
+            <p className="mt-1 text-xs leading-relaxed text-[#8f98b2]">Download and install Brave Browser to help block many ads and pop-ups.</p>
+            <a href="https://play.google.com/store/apps/details?id=com.brave.browser" target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-2 rounded-lg bg-white/[0.08] px-3 py-2 text-xs font-semibold text-blue-300 transition hover:bg-white/[0.14]">
+              Get Brave for Android <ExternalLink size={13} />
+            </a>
+          </div>
+        </section>
+      </aside>
       </div>
     </div>
   );
