@@ -6,15 +6,64 @@ import { resolveAnimeMapping } from '../src/lib/anime.js';
 const rows = JSON.parse(readFileSync(new URL('../public/data/anime-mappings.json', import.meta.url)));
 
 test('numbered server lineup and tags', () => {
-  assert.deepEqual(SERVERS.map(s => s.id), [1, 2, 3, 4, 5]);
+  assert.deepEqual(SERVERS.map(s => s.id), [1, 2, 3, 4, 5, 6]);
   assert.deepEqual(SERVERS[0].tags, ['Fast', 'High quality', 'Ad free']);
   assert.deepEqual(SERVERS[3].tags, ['4K', 'Ad free']);
+  assert.deepEqual(SERVERS[5].tags, ['HD', 'Ad free']);
   assert.match(buildStreamUrl(1, 'movie', 550), /bingr.one/);
   assert.match(buildStreamUrl(2, 'movie', 550), /vidstuck.cc/);
   assert.match(buildStreamUrl(3, 'movie', 550), /tgvid.lovable.app/);
   assert.equal(buildStreamUrl(5, 'movie', 324857), 'https://vidnest.fun/movie/324857');
   assert.equal(buildStreamUrl(5, 'tv', 94997, {season: 1, episode: 1, startAt: 120}), 'https://vidnest.fun/tv/94997/1/1?startAt=120');
+  assert.equal(
+    buildStreamUrl(6, 'movie', 27205),
+    'https://priva-embed.onrender.com/embed/movie/27205?branding=Priva&color=2563EB&providers=vega%3Acastle'
+  );
+  assert.equal(
+    buildStreamUrl(6, 'movie', 27205, { startAt: 10 }),
+    'https://priva-embed.onrender.com/embed/movie/27205?branding=Priva&color=2563EB&providers=vega%3Acastle'
+  );
+  assert.equal(
+    buildStreamUrl(6, 'movie', 27205, { startAt: 40.7 }),
+    'https://priva-embed.onrender.com/embed/movie/27205?branding=Priva&color=2563EB&start=40&providers=vega%3Acastle'
+  );
+  assert.equal(
+    buildStreamUrl(6, 'tv', 1396, { season: 1, episode: 1, startAt: 42.3 }),
+    'https://priva-embed.onrender.com/embed/tv/1396/1/1?branding=Priva&color=2563EB&start=42&providers=vega%3Acastle&subs=en'
+  );
   assert.equal(buildStreamUrl(99, 'movie', 550), buildStreamUrl(1, 'movie', 550));
+});
+test('priva-player postMessage telemetry and completion', () => {
+  const tick = parsePlayerMessage({
+    source: 'priva-player',
+    event: 'timeupdate',
+    currentTime: 40,
+    duration: 200,
+    progress: 20,
+    season: 1,
+    episode: 2,
+  });
+  assert.deepEqual(tick, {
+    timestamp: 40,
+    duration: 200,
+    progress: 20,
+    season: 1,
+    episode: 2,
+    ended: false,
+  });
+  const done = parsePlayerMessage({
+    source: 'priva-player',
+    event: 'ended',
+    currentTime: 200,
+    duration: 200,
+    progress: 100,
+    season: null,
+    episode: null,
+  });
+  assert.equal(done.ended, true);
+  assert.equal(done.progress, 100);
+  assert.equal(done.season, undefined);
+  assert.equal(done.episode, undefined);
 });
 test('frameXTV movie/TV embeds and resume timestamp', () => {
   assert.equal(buildStreamUrl(4, 'movie', 550), 'https://framextv.xyz/embed/550?autoplay=1&muted=0');
