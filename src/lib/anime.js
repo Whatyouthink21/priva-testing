@@ -34,8 +34,20 @@ export function resolveContinuousMapping(rows, id, season, episode, seasons) {
   const entries = rows.filter(([kind, tmdb, s]) => kind === 'tv' && tmdb === Number(id) && s > 0);
   if (!entries.length || new Set(entries.map(r => r[4])).size !== 1) return null;
   const earlier = seasons.filter(s => s.season_number > 0 && s.season_number < season);
-  if (earlier.length !== season - 1 || earlier.some(s => !Number.isInteger(s.episode_count))) return null;
-  return { malId: String(entries[0][4]), episode: earlier.reduce((sum, s) => sum + s.episode_count, Number(episode)) };
+  const current = seasons.find(s => s.season_number === Number(season));
+  if (earlier.length !== season - 1 || earlier.some(s => !Number.isInteger(s.episode_count)) || !Number.isInteger(current?.episode_count)) return null;
+  const precedingCount = earlier.reduce((sum, s) => sum + s.episode_count, 0);
+  const requested = Number(episode);
+  // Some TMDB seasons expose absolute series episode numbers (e.g. One Piece
+  // S16 E644), while others restart at E1. Detect the absolute form by checking
+  // it against this season's count and the cumulative range for this season.
+  if (requested > current.episode_count) {
+    if (requested > precedingCount && requested <= precedingCount + current.episode_count) {
+      return { malId: String(entries[0][4]), episode: requested };
+    }
+    return null;
+  }
+  return { malId: String(entries[0][4]), episode: precedingCount + requested };
 }
 
 // Match a cour using original episode air dates; numbering restarts for each MAL entry.

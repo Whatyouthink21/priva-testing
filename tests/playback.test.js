@@ -42,11 +42,20 @@ test('episode offsets, ambiguity, and language URLs', () => {
 
 test('continuous anime seasons use absolute episodes and exclude specials', async () => {
   const { resolveContinuousMapping } = await import('../src/lib/anime.js');
-  const seasons = [{season_number: 0, episode_count: 9}, {season_number: 1, episode_count: 61}, {season_number: 2, episode_count: 16}];
+  const seasons = [{season_number: 0, episode_count: 9}, {season_number: 1, episode_count: 61}, {season_number: 2, episode_count: 16}, {season_number: 3, episode_count: 20}];
   assert.deepEqual(resolveContinuousMapping(rows, 37854, 2, 1, seasons), {malId: '21', episode: 62});
   assert.deepEqual(resolveContinuousMapping(rows, 37854, 3, 2, seasons), {malId: '21', episode: 79});
+  // TMDB can expose a globally numbered episode inside a later season. Do not add the season offset twice.
+  assert.deepEqual(resolveContinuousMapping(rows, 37854, 3, 79, seasons), {malId: '21', episode: 79});
   assert.equal(resolveContinuousMapping(rows, 1429, 2, 1, seasons), null);
   assert.equal(resolveContinuousMapping(rows, 37854, 3, 1, []), null);
+});
+
+test('One Piece TMDB global episode numbers are not offset a second time', async () => {
+  const { resolveContinuousMapping } = await import('../src/lib/anime.js');
+  const counts = [61, 16, ...Array(12).fill(43), 49]; // 642 episodes in seasons 1–15
+  const seasons = [{season_number: 0, episode_count: 9}, ...counts.map((episode_count, i) => ({season_number: i + 1, episode_count})), {season_number: 16, episode_count: 52}];
+  assert.deepEqual(resolveContinuousMapping(rows, 37854, 16, 644, seasons), {malId: '21', episode: 644});
 });
 
 test('cour air dates restart episodes at the correct AniList sequel', async () => {
@@ -60,7 +69,7 @@ test('cour air dates restart episodes at the correct AniList sequel', async () =
 
 test('later-season orchestration handles continuous anime, split cours, and API outages', async () => {
   const { resolveAnimePlayback } = await import('../src/lib/animePlayback.js');
-  const detail = {seasons: [{season_number: 1, episode_count: 12}]};
+  const detail = {seasons: [{season_number: 1, episode_count: 12}, {season_number: 2, episode_count: 12}]};
   const local = [['tv', 10, 1, 0, 100]];
   const episodeList = {episodes: [{episode_number: 1, air_date: '2024-07-01'}, {episode_number: 2, air_date: '2024-07-08'}]};
   const dependencies = {
