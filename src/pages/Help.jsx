@@ -80,7 +80,7 @@ export default function Help() {
               </span>
             </div>
             <p className="mt-2 text-[13.5px] leading-relaxed text-[#8f98b2]">
-              Switch seamlessly between Servers 1–5 and the Sub/Dub ANIME server inside the player top bar
+              Switch seamlessly between Servers 1–4 and the Sub/Dub ANIME server inside the player top bar
               if a stream buffers or lacks your preferred subtitle track.
             </p>
           </div>
