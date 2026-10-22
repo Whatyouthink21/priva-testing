@@ -6,11 +6,10 @@ const ANNOUNCEMENTS = [
   {
     version: 'v2.5',
     title: 'Priva release v2.5',
-    summary: 'UI enhancements.',
+    summary: 'Cinematic trailer previews. Refined anime playback.',
     updates: [
-      'Movie and TV detail pages now autoplay a muted YouTube trailer preview in the hero background when TMDB provides one. Playback controls are hidden; titles remain visible while the synopsis is tucked away.',
-      'Explore official movie collections from the detail page, with related movies and series shown when a collection is not available.',
-      'The trailer preview falls back to the title artwork when no eligible YouTube trailer is listed.',
+      'Movie and TV detail pages now animate the title forward while the description fades away, then start a muted YouTube trailer preview with controls hidden. Home, Movies, and Anime hero banners also play available muted trailer previews.',
+      'TryEmbed is now available as ANIME 3 with Sub/Dub and an iframe sandbox that restricts pop-ups and top-level redirects. Ads rendered inside the player may still appear.',
     ],
   },
   {

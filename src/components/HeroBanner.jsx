@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Check, ChevronLeft, ChevronRight, Info, Play, Plus } from 'lucide-react';
-import { fetchLogoPath, formatScore, IMG } from '../lib/tmdb';
+import { api, fetchLogoPath, formatScore, IMG } from '../lib/tmdb';
 import { useLibrary } from '../context/LibraryContext';
 import { useToast } from '../context/ToastContext';
 
@@ -14,6 +14,7 @@ export default function HeroBanner({ slides = [], loading = false }) {
   const [prevBackdrop, setPrevBackdrop] = useState(null);
   const [paused, setPaused] = useState(false);
   const [readyLogos, setReadyLogos] = useState({});
+  const [trailerKey, setTrailerKey] = useState('');
   const stripRef = useRef(null);
 
   const firstSlideKey = slides[0] ? `${slides[0].type}:${slides[0].id}` : '';
@@ -25,6 +26,27 @@ export default function HeroBanner({ slides = [], loading = false }) {
   }, [firstSlideKey]);
 
   const active = slides[index] || slides[0] || null;
+
+  useEffect(() => {
+    if (!active?.id || !['movie', 'tv'].includes(active.type)) {
+      setTrailerKey('');
+      return undefined;
+    }
+    let cancelled = false;
+    setTrailerKey('');
+    api.videos(active.type, active.id).then((response) => {
+      if (cancelled) return;
+      const videos = (response.results || []).filter(
+        (video) => video.site === 'YouTube' && video.key && (video.type === 'Trailer' || video.type === 'Teaser')
+      );
+      const trailer = videos.find((video) => video.type === 'Trailer' && video.official)
+        || videos.find((video) => video.type === 'Trailer')
+        || videos.find((video) => video.official)
+        || videos[0];
+      setTrailerKey(trailer?.key || '');
+    }).catch(() => { if (!cancelled) setTrailerKey(''); });
+    return () => { cancelled = true; };
+  }, [active?.type, active?.id]);
 
   // Preload ONLY the next single slide backdrop + lazily fetch only the active slide's logo
   useEffect(() => {
@@ -175,6 +197,18 @@ export default function HeroBanner({ slides = [], loading = false }) {
               decoding="async"
               fetchpriority="high"
               className="block h-full w-full object-cover object-top sm:hidden"
+            />
+          )}
+          {trailerKey && (
+            <iframe
+              key={trailerKey}
+              src={`https://www.youtube-nocookie.com/embed/${trailerKey}?autoplay=1&mute=1&controls=0&loop=1&playlist=${trailerKey}&playsinline=1&modestbranding=1&rel=0&iv_load_policy=3&disablekb=1`}
+              title={`${active.title} trailer preview`}
+              allow="autoplay; encrypted-media; picture-in-picture"
+              referrerPolicy="strict-origin-when-cross-origin"
+              tabIndex={-1}
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 h-full w-full scale-[1.2] border-0"
             />
           )}
         </div>

@@ -256,8 +256,8 @@ export const api = {
           : 'images,videos,credits,recommendations,similar,content_ratings',
       include_image_language: 'en,null',
     }),
+  videos: (type, id) => tmdb(`/${type}/${id}/videos`),
   season: (id, seasonNumber = 1) => tmdb(`/tv/${id}/season/${seasonNumber}`),
-  collection: (id) => tmdb(`/collection/${id}`),
   person: (id) =>
     tmdb(`/person/${id}`, {
       append_to_response: 'combined_credits',
