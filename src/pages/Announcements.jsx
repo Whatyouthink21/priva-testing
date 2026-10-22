@@ -4,6 +4,16 @@ import { Megaphone, Sparkles } from 'lucide-react';
 // EDIT ANNOUNCEMENTS HERE: update this array or add a new entry at the top.
 const ANNOUNCEMENTS = [
   {
+    version: 'v2.3',
+    title: 'Priva release v2.3',
+    summary: 'AniList discovery. Smarter anime season playback.',
+    updates: [
+      'Discover trending and current-season anime with AniList-powered shelves. Mapped titles open the matching season; other titles link to AniList details.',
+      'Improved later-season playback: continuous series now use cumulative episode numbers, while split-season anime can use AniList sequel and air-date matching.',
+      'Sub and Dub remain available on ANIME. Missing mappings still offer manual controls and a numbered-server fallback. Stream and language availability depend on the source.',
+    ],
+  },
+  {
     version: 'v2.2',
     title: 'Priva release v2.2',
     summary: 'Smoother anime playback. A refreshed server lineup.',
