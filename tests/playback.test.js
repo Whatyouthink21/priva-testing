@@ -17,19 +17,19 @@ test('numbered server lineup and tags', () => {
   assert.equal(buildStreamUrl(5, 'tv', 94997, {season: 1, episode: 1, startAt: 120}), 'https://vidnest.fun/tv/94997/1/1?startAt=120');
   assert.equal(
     buildStreamUrl(6, 'movie', 27205),
-    'https://priva-embed.onrender.com/embed/movie/27205?branding=Priva&color=2563EB&providers=vega%3Acastle'
+    'https://priva-embed.onrender.com/embed/movie/27205?branding=Priva&color=2563EB&providers=vega%3Acastle%2Cvega%3AautoEmbed%2Cvega%3AmovieBoxWeb'
   );
   assert.equal(
     buildStreamUrl(6, 'movie', 27205, { startAt: 10 }),
-    'https://priva-embed.onrender.com/embed/movie/27205?branding=Priva&color=2563EB&providers=vega%3Acastle'
+    'https://priva-embed.onrender.com/embed/movie/27205?branding=Priva&color=2563EB&providers=vega%3Acastle%2Cvega%3AautoEmbed%2Cvega%3AmovieBoxWeb'
   );
   assert.equal(
     buildStreamUrl(6, 'movie', 27205, { startAt: 40.7 }),
-    'https://priva-embed.onrender.com/embed/movie/27205?branding=Priva&color=2563EB&start=40&providers=vega%3Acastle'
+    'https://priva-embed.onrender.com/embed/movie/27205?branding=Priva&color=2563EB&start=40&providers=vega%3Acastle%2Cvega%3AautoEmbed%2Cvega%3AmovieBoxWeb'
   );
   assert.equal(
     buildStreamUrl(6, 'tv', 1396, { season: 1, episode: 1, startAt: 42.3 }),
-    'https://priva-embed.onrender.com/embed/tv/1396/1/1?branding=Priva&color=2563EB&start=42&providers=vega%3Acastle&subs=en'
+    'https://priva-embed.onrender.com/embed/tv/1396/1/1?branding=Priva&color=2563EB&start=42&providers=vega%3Acastle%2Cvega%3AautoEmbed%2Cvega%3AmovieBoxWeb&subs=en'
   );
   assert.equal(buildStreamUrl(99, 'movie', 550), buildStreamUrl(1, 'movie', 550));
 });
