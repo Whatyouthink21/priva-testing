@@ -89,6 +89,30 @@ export const SERVERS = [
         startAt: startAt > 0 ? Math.floor(startAt) : undefined,
       }),
   },
+  {
+    id: 6,
+    label: 'Server 6',
+    tags: ['HD', 'Ad free'],
+    buildMovieUrl: (id, opts = {}) =>
+      withQuery('https://priva-embed.onrender.com/embed/movie/' + id, {
+        branding: 'Priva',
+        color: ACCENT_HEX,
+        start: opts.startAt > 15 ? Math.floor(opts.startAt) : undefined,
+        title: opts.title,
+        year: opts.year,
+        providers: 'vega:castle',
+      }),
+    buildTvUrl: (id, season = 1, episode = 1, opts = {}) =>
+      withQuery(`https://priva-embed.onrender.com/embed/tv/${id}/${season}/${episode}`, {
+        branding: 'Priva',
+        color: ACCENT_HEX,
+        start: opts.startAt > 15 ? Math.floor(opts.startAt) : undefined,
+        title: opts.title,
+        year: opts.year,
+        providers: 'vega:castle',
+        subs: 'en',
+      }),
+  },
 ];
 
 // Anime embeds use external anime IDs, never TMDB IDs.
