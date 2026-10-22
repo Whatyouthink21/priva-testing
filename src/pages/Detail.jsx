@@ -5,7 +5,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
-  Film,
   Play,
   Plus,
   Search,
@@ -13,7 +12,6 @@ import {
 } from 'lucide-react';
 import PosterCard from '../components/PosterCard';
 import DownloadModal from '../components/DownloadModal';
-import TrailerModal from '../components/TrailerModal';
 import {
   api,
   extractCertification,
@@ -43,9 +41,10 @@ export default function Detail({ type = 'movie' }) {
   const [loadingEpisodes, setLoadingEpisodes] = useState(false);
   const [epQuery, setEpQuery] = useState('');
   const [downloadModal, setDownloadModal] = useState({ open: false, season: 1, episode: 1 });
-  const [trailerOpen, setTrailerOpen] = useState(false);
+  const [collectionData, setCollectionData] = useState(null);
 
   const castScrollerRef = useRef(null);
+  const collectionScrollerRef = useRef(null);
 
   const numericId = useMemo(() => {
     const m = String(id || '').match(/\d+/);
@@ -61,12 +60,38 @@ export default function Detail({ type = 'movie' }) {
     setLogoLoadedUrl(null);
     setEpisodes([]);
     setEpQuery('');
+    setCollectionData(null);
 
     api
       .fullDetail(type, numericId)
       .then((data) => {
         if (cancelled) return;
         setDetail(data);
+        if (type === 'movie' && data.belongs_to_collection?.id) {
+          api.collection(data.belongs_to_collection.id).then((collection) => {
+            if (!cancelled) setCollectionData({
+              name: collection.name,
+              backdrop_path: collection.backdrop_path,
+              isOfficialCollection: true,
+              items: (collection.parts || []).map((part) => normalizeItem(part, 'movie')).filter((part) => part?.id !== numericId),
+            });
+          }).catch(() => {});
+        } else {
+          const seen = new Set([numericId]);
+          const items = [];
+          for (const item of [...(data.recommendations?.results || []), ...(data.similar?.results || [])]) {
+            if (!item?.id || seen.has(item.id) || (!item.poster_path && !item.backdrop_path)) continue;
+            seen.add(item.id);
+            items.push(normalizeItem(item, type));
+            if (items.length >= 20) break;
+          }
+          if (items.length) setCollectionData({
+            name: type === 'tv' ? (isAnimeItem(data) ? 'Related Anime' : 'Related Series') : 'Related Movies',
+            backdrop_path: data.backdrop_path,
+            isOfficialCollection: false,
+            items,
+          });
+        }
         const name = titleOf(data);
         document.title = `${name} · Priva`;
 
@@ -179,9 +204,13 @@ export default function Detail({ type = 'movie' }) {
 
   const metaItems = [score, year, cert, durationMeta].filter(Boolean);
 
-  const trailer = (detail.videos?.results || []).find(
-    (v) => v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser')
+  const youtubeVideos = (detail.videos?.results || []).filter(
+    (video) => video.site === 'YouTube' && video.key && (video.type === 'Trailer' || video.type === 'Teaser')
   );
+  const trailer = youtubeVideos.find((video) => video.type === 'Trailer' && video.official)
+    || youtubeVideos.find((video) => video.type === 'Trailer')
+    || youtubeVideos.find((video) => video.official)
+    || youtubeVideos[0];
 
   const cast = (detail.credits?.cast || []).slice(0, 20);
 
@@ -238,6 +267,18 @@ export default function Detail({ type = 'movie' }) {
               />
             )
           )}
+          {trailer && (
+            <iframe
+              key={trailer.key}
+              src={`https://www.youtube-nocookie.com/embed/${trailer.key}?autoplay=1&mute=1&controls=0&loop=1&playlist=${trailer.key}&playsinline=1&modestbranding=1&rel=0&iv_load_policy=3&disablekb=1`}
+              title={`${title} trailer preview`}
+              allow="autoplay; encrypted-media; picture-in-picture"
+              referrerPolicy="strict-origin-when-cross-origin"
+              tabIndex={-1}
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 h-full w-full scale-[1.2] border-0"
+            />
+          )}
         </div>
 
         <div className="hero-gradient-mask pointer-events-none absolute inset-0" />
@@ -274,7 +315,7 @@ export default function Detail({ type = 'movie' }) {
               ))}
             </div>
 
-            {detail.overview && (
+            {!trailer && detail.overview && (
               <p className="mb-4 text-[14px] leading-[1.65] text-[#c4ccdf] sm:text-[15px]">
                 {detail.overview}
               </p>
@@ -343,17 +384,6 @@ export default function Detail({ type = 'movie' }) {
                 <span>Download</span>
               </button>
 
-              {trailer && (
-                <button
-                  type="button"
-                  onClick={() => setTrailerOpen(true)}
-                  className="btn-hero-glass inline-flex h-[50px] items-center justify-center gap-2 rounded-[10px] px-5 text-[14px] font-semibold"
-                >
-                  <Film size={17} />
-                  <span>Trailer</span>
-                </button>
-              )}
-
               <span className="rounded-lg bg-white/[0.08] px-3 py-1.5 text-[12px] font-bold uppercase tracking-wider text-white/75">
                 {anime ? 'Anime' : type === 'tv' ? 'Series' : 'Movie'}
               </span>
@@ -361,6 +391,34 @@ export default function Detail({ type = 'movie' }) {
           </div>
         </div>
       </section>
+
+      {collectionData?.items?.length > 0 && (
+        <section className="px-4 pt-8 sm:px-8 lg:pl-[108px] lg:pr-12">
+          <div className="relative flex min-h-[180px] items-center overflow-hidden rounded-2xl border border-white/[0.08] bg-[#151820] sm:min-h-[220px]">
+            {collectionData.backdrop_path && (
+              <img src={IMG.backdrop(collectionData.backdrop_path, 'w1280')} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover object-center opacity-45" loading="lazy" />
+            )}
+            <div className="absolute inset-0 bg-gradient-to-r from-[#080a0e]/95 via-[#080a0e]/65 to-[#080a0e]/15" />
+            <div className="relative z-10 max-w-3xl p-6 sm:p-8">
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-blue-300">
+                {collectionData.isOfficialCollection ? 'Movie Collection' : 'Explore More'}
+              </p>
+              <h2 className="mt-2 font-display text-2xl font-extrabold text-white sm:text-3xl">
+                {collectionData.isOfficialCollection ? `Part of the ${collectionData.name} Collection` : collectionData.name}
+              </h2>
+              <button type="button" onClick={() => collectionScrollerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })} className="mt-4 rounded-lg bg-white/[0.16] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/[0.25]">
+                {collectionData.isOfficialCollection ? 'View The Collection' : 'Explore Titles'}
+              </button>
+            </div>
+          </div>
+          <div ref={collectionScrollerRef} className="scroll-mt-24 pt-6">
+            <h2 className="mb-4 font-display text-xl font-bold text-white">{collectionData.name}</h2>
+            <div className="no-scrollbar flex gap-4 overflow-x-auto pb-3">
+              {collectionData.items.map((item) => <div key={`${item.type}-${item.id}`} className="w-[150px] shrink-0 sm:w-[180px]"><PosterCard item={item} /></div>)}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* EPISODES LIST (TV & Anime) */}
       {type === 'tv' && (
@@ -605,12 +663,6 @@ export default function Detail({ type = 'movie' }) {
         episodeCount={episodes.length || 24}
       />
 
-      <TrailerModal
-        open={trailerOpen}
-        onClose={() => setTrailerOpen(false)}
-        youtubeKey={trailer?.key}
-        title={title}
-      />
     </div>
   );
 }

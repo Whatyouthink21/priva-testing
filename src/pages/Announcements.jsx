@@ -4,6 +4,16 @@ import { Megaphone, Sparkles } from 'lucide-react';
 // EDIT ANNOUNCEMENTS HERE: update this array or add a new entry at the top.
 const ANNOUNCEMENTS = [
   {
+    version: 'v2.5',
+    title: 'Priva release v2.5',
+    summary: 'UI enhancements.',
+    updates: [
+      'Movie and TV detail pages now autoplay a muted YouTube trailer preview in the hero background when TMDB provides one. Playback controls are hidden; titles remain visible while the synopsis is tucked away.',
+      'Explore official movie collections from the detail page, with related movies and series shown when a collection is not available.',
+      'The trailer preview falls back to the title artwork when no eligible YouTube trailer is listed.',
+    ],
+  },
+  {
     version: 'v2.4',
     title: 'Priva release v2.4',
     summary: 'A new anime server.',
