@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { SERVERS, buildStreamUrl, buildAnimeUrl, buildShonenUrl, buildTryEmbedUrl, parsePlayerMessage } from '../src/lib/sources.js';
+import { SERVERS, buildStreamUrl, buildZokoAnimeUrl, buildMegaPlayAnimeUrl, parsePlayerMessage } from '../src/lib/sources.js';
 import { resolveAnimeMapping } from '../src/lib/anime.js';
 const rows = JSON.parse(readFileSync(new URL('../public/data/anime-mappings.json', import.meta.url)));
 
@@ -32,14 +32,12 @@ test('episode offsets, ambiguity, and language URLs', () => {
   const fixture = [['tv', 1, 1, 0, 100], ['tv', 1, 1, 12, 200]];
   assert.deepEqual(resolveAnimeMapping(fixture, 'tv', 1, 1, 13), {malId: '200', episode: 1});
   assert.equal(resolveAnimeMapping([...fixture, ['tv', 1, 1, 12, 300]], 'tv', 1, 1, 13), null);
-  assert.equal(buildAnimeUrl(199, 1, 'dub'), 'https://megaplay.buzz/stream/mal/199/1/dub');
-  assert.equal(buildAnimeUrl(199, 1, 'sub'), 'https://megaplay.buzz/stream/mal/199/1/sub');
-  assert.equal(buildAnimeUrl(''), '');
-  assert.equal(buildShonenUrl(21, 3, 'dub', 'https://priva.example'), 'https://shonen.to/embed/anilist/21/3?language=dub&parentOrigin=https%3A%2F%2Fpriva.example');
-  assert.equal(buildShonenUrl('', 1), '');
-  assert.equal(buildTryEmbedUrl(172463, 1, 'sub'), 'https://tryembed.us.cc/embed/anime/172463/1/sub');
-  assert.equal(buildTryEmbedUrl(199, 2, 'dub', 'mal'), 'https://tryembed.us.cc/embed/anime/mal/199/2/dub');
-  assert.equal(buildTryEmbedUrl('', 1), '');
+  assert.equal(buildZokoAnimeUrl(199, 1, 'dub'), 'https://zokoanime.video/stream/mal/199/1/dub?color=35d5bf');
+  assert.equal(buildZokoAnimeUrl(199, 1, 'hsub'), 'https://zokoanime.video/stream/mal/199/1/hsub?color=35d5bf');
+  assert.equal(buildZokoAnimeUrl(''), '');
+  assert.equal(buildMegaPlayAnimeUrl(199, 1, 'dub'), 'https://megaplay.buzz/stream/mal/199/1/dub');
+  assert.equal(buildMegaPlayAnimeUrl(199, 1, 'hsub'), 'https://megaplay.buzz/stream/mal/199/1/sub');
+  assert.equal(buildMegaPlayAnimeUrl(''), '');
 });
 
 test('continuous anime seasons use absolute episodes and exclude specials', async () => {

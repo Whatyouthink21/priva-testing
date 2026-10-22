@@ -80,8 +80,7 @@ export default function Help() {
               </span>
             </div>
             <p className="mt-2 text-[13.5px] leading-relaxed text-[#8f98b2]">
-              Switch seamlessly between Servers 1–4 and the Sub/Dub ANIME server inside the player top bar
-              if a stream buffers or lacks your preferred subtitle track.
+              Switch between Servers 1–4 and ANIME 1 (ZokoAnime) or ANIME 2 (MegaPlay) from the player top bar. Anime players offer Sub/Dub, with Hard-sub also available on ANIME 1; track availability varies by title.
             </p>
           </div>
 

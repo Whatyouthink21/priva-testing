@@ -4,6 +4,16 @@ import { Megaphone, Sparkles } from 'lucide-react';
 // EDIT ANNOUNCEMENTS HERE: update this array or add a new entry at the top.
 const ANNOUNCEMENTS = [
   {
+    version: 'v2.4',
+    title: 'Priva release v2.4',
+    summary: 'A new anime server.',
+    updates: [
+      'ANIME 1 now uses ZokoAnime as the default anime player, with Sub, Hard-sub, and Dub track options where available.',
+      'ANIME 2 keeps MegaPlay as an alternate source. Choose either anime player from the watch controls.',
+      'Anime playback uses MAL IDs and episode numbers. Availability, tracks, and playback depend on the title and provider.',
+    ],
+  },
+  {
     version: 'v2.3',
     title: 'Priva release v2.3',
     summary: 'AniList discovery. Smarter anime season playback.',
