@@ -257,6 +257,7 @@ export const api = {
       include_image_language: 'en,null',
     }),
   season: (id, seasonNumber = 1) => tmdb(`/tv/${id}/season/${seasonNumber}`),
+  collection: (id) => tmdb(`/collection/${id}`),
   person: (id) =>
     tmdb(`/person/${id}`, {
       append_to_response: 'combined_credits',
