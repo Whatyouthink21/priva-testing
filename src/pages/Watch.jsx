@@ -64,12 +64,24 @@ export default function Watch({ type: propType = 'movie' }) {
   const [loading, setLoading] = useState(true);
   const [frameLoading, setFrameLoading] = useState(true);
   const [downloadOpen, setDownloadOpen] = useState(false);
+  const [headerHeight, setHeaderHeight] = useState(0);
+  const headerRef = useRef(null);
 
   // Capture initial resume time once per title/episode load so live progress updates don't reload iframe
   const playerRef = useRef(null);
   const initialResumeRef = useRef(0);
   const detailRef = useRef(null);
   const currentEpRef = useRef(null);
+
+  useEffect(() => {
+    const header = headerRef.current;
+    if (!header) return undefined;
+    const measure = () => setHeaderHeight(Math.ceil(header.getBoundingClientRect().height));
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(header);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const existing = getProgress(type, numericId);
@@ -286,7 +298,7 @@ export default function Watch({ type: propType = 'movie' }) {
   return (
     <div className="min-h-screen bg-[#0f1014] pb-16">
       {/* Top Cinema Control Bar */}
-      <header className="sticky top-0 z-40 flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.06] bg-[#0a0b0e]/95 px-4 py-3 backdrop-blur-xl sm:px-6">
+      <header ref={headerRef} className="sticky top-0 z-40 flex flex-col items-stretch gap-2 border-b border-white/[0.06] bg-[#0a0b0e]/95 px-4 py-2 backdrop-blur-xl sm:px-6">
         <div className="flex min-w-0 items-center gap-3">
           <button
             type="button"
@@ -312,7 +324,7 @@ export default function Watch({ type: propType = 'movie' }) {
 
         {/* Streaming sources */}
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex flex-wrap items-center gap-1 rounded-xl bg-[#16181f] p-1 ring-1 ring-white/[0.08]">
+          <div className="flex max-w-full shrink-0 flex-nowrap items-center gap-1 overflow-x-auto rounded-xl bg-[#16181f] p-1 ring-1 ring-white/[0.08]">
             {[...SERVERS, ...(anime ? [{ id: 'anime1', label: 'ANIME 1' }, { id: 'anime2', label: 'ANIME 2' }, { id: 'anime3', label: 'ANIME 3' }] : [])].map((srv) => (
               <button
                 key={srv.id}
@@ -322,7 +334,7 @@ export default function Watch({ type: propType = 'movie' }) {
                   setServerId(srv.id);
                   setFrameLoading(true);
                 }}
-                className={`rounded-lg px-3.5 py-1.5 text-[12.5px] font-bold transition ${
+                className={`whitespace-nowrap rounded-lg px-2.5 py-1.5 text-[12px] font-bold transition ${
                   serverId === srv.id
                     ? 'bg-white text-[#0f1014] shadow'
                     : 'text-[#8f98b2] hover:text-white'
@@ -339,7 +351,6 @@ export default function Watch({ type: propType = 'movie' }) {
               <label>Audio <select aria-label="Anime language" value={animeLanguage} onChange={(e) => { setAnimeLanguage(e.target.value); setFrameLoading(true); }} className="rounded-lg bg-[#16181f] p-2 text-white"><option value="sub">Sub</option>{serverId === 'anime1' && <option value="hsub">Hard-sub</option>}<option value="dub">Dub</option></select></label>
               <label>MAL ID <input disabled={mappingStatus === 'loading'} aria-label="MyAnimeList ID" type="number" min="1" value={malId} onChange={(e) => { setMalId(e.target.value); setFrameLoading(true); }} className="w-24 rounded-lg bg-[#16181f] p-2 text-white" /></label>
               <label>Anime episode <input disabled={mappingStatus === 'loading'} aria-label="Anime episode" type="number" min="1" value={animeEpisode} onChange={(e) => { setAnimeEpisode(Math.max(1, Number(e.target.value))); setFrameLoading(true); }} className="w-16 rounded-lg bg-[#16181f] p-2 text-white" /></label>
-              <span>{serverId === 'anime3' ? 'Sandbox blocks pop-ups/top-level redirects; embedded ads may still appear.' : 'MAL ID is filled automatically when available. Track availability varies.'}</span>
             </div>
           )}
           <button
@@ -371,7 +382,7 @@ export default function Watch({ type: propType = 'movie' }) {
       </header>
 
       {/* Main 16:9 Cinema Stage */}
-      <div className="relative h-[56vh] w-full bg-black sm:h-[74vh] lg:h-[83vh]">
+      <div className="relative min-h-[320px] w-full bg-black" style={{ height: `calc(100dvh - ${headerHeight}px)` }}>
         {frameLoading && streamSrc && (
           <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-black/80">
             <Loader2 size={32} className="animate-spin text-blue-500" />
