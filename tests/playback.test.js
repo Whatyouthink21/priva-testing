@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { SERVERS, buildStreamUrl, buildAnimeUrl, parsePlayerMessage } from '../src/lib/sources.js';
+import { SERVERS, buildStreamUrl, buildAnimeUrl, buildShonenUrl, buildTryEmbedUrl, parsePlayerMessage } from '../src/lib/sources.js';
 import { resolveAnimeMapping } from '../src/lib/anime.js';
 const rows = JSON.parse(readFileSync(new URL('../public/data/anime-mappings.json', import.meta.url)));
 
@@ -35,6 +35,11 @@ test('episode offsets, ambiguity, and language URLs', () => {
   assert.equal(buildAnimeUrl(199, 1, 'dub'), 'https://megaplay.buzz/stream/mal/199/1/dub');
   assert.equal(buildAnimeUrl(199, 1, 'sub'), 'https://megaplay.buzz/stream/mal/199/1/sub');
   assert.equal(buildAnimeUrl(''), '');
+  assert.equal(buildShonenUrl(21, 3, 'dub', 'https://priva.example'), 'https://shonen.to/embed/anilist/21/3?language=dub&parentOrigin=https%3A%2F%2Fpriva.example');
+  assert.equal(buildShonenUrl('', 1), '');
+  assert.equal(buildTryEmbedUrl(172463, 1, 'sub'), 'https://tryembed.us.cc/embed/anime/172463/1/sub');
+  assert.equal(buildTryEmbedUrl(199, 2, 'dub', 'mal'), 'https://tryembed.us.cc/embed/anime/mal/199/2/dub');
+  assert.equal(buildTryEmbedUrl('', 1), '');
 });
 
 test('continuous anime seasons use absolute episodes and exclude specials', async () => {

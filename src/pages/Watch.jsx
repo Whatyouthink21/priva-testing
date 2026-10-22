@@ -25,7 +25,8 @@ import {
   yearOf,
 } from '../lib/tmdb';
 import { resolveAnimePlayback } from '../lib/animePlayback';
-import { buildAnimeUrl, buildStreamUrl, parsePlayerMessage, SERVERS } from '../lib/sources';
+import { buildAnimeUrl, buildShonenUrl, buildTryEmbedUrl, buildStreamUrl, parsePlayerMessage, SERVERS } from '../lib/sources';
+import { getAniListIdByMal } from '../lib/anilist';
 import { useLibrary } from '../context/LibraryContext';
 import { useToast } from '../context/ToastContext';
 
@@ -55,6 +56,7 @@ export default function Watch({ type: propType = 'movie' }) {
   const [serverId, setServerId] = useState(1);
   const [animeLanguage, setAnimeLanguage] = useState('sub');
   const [malId, setMalId] = useState('');
+  const [anilistId, setAnilistId] = useState('');
   const [mappingStatus, setMappingStatus] = useState('loading');
   const serverChoiceRef = useRef(null);
   const [animeEpisode, setAnimeEpisode] = useState(episode);
@@ -240,16 +242,23 @@ export default function Watch({ type: propType = 'movie' }) {
     return () => { cancelled = true; };
   }, [anime, numericId, type, season, episode, detail]);
 
-  const streamSrc = useMemo(
-    () =>
-      serverId === 'anime' ? buildAnimeUrl(malId, animeEpisode, animeLanguage) : buildStreamUrl(serverId, type, numericId, {
-        season,
-        episode,
-        startAt: initialResumeRef.current,
-        autoplayNext: Boolean(settings.autoplayNext),
-      }),
-    [serverId, type, numericId, season, episode, settings.autoplayNext, malId, animeEpisode, animeLanguage]
-  );
+  useEffect(() => {
+    let cancelled = false;
+    setAnilistId('');
+    if (!malId) return undefined;
+    getAniListIdByMal(malId).then((id) => { if (!cancelled) setAnilistId(id ? String(id) : ''); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [malId]);
+
+  const streamSrc = useMemo(() => {
+    if (serverId === 'anime') return buildAnimeUrl(malId, animeEpisode, animeLanguage);
+    if (serverId === 'shonen') return buildShonenUrl(anilistId, animeEpisode, animeLanguage, window.location.origin);
+    if (serverId === 'tryembed') return buildTryEmbedUrl(malId, animeEpisode, animeLanguage, 'mal');
+    return buildStreamUrl(serverId, type, numericId, {
+      season, episode, startAt: initialResumeRef.current,
+      autoplayNext: Boolean(settings.autoplayNext),
+    });
+  }, [serverId, type, numericId, season, episode, settings.autoplayNext, malId, anilistId, animeEpisode, animeLanguage]);
 
   useEffect(() => { setFrameLoading(true); }, [streamSrc]);
 
@@ -314,7 +323,7 @@ export default function Watch({ type: propType = 'movie' }) {
         {/* Streaming sources */}
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex flex-wrap items-center gap-1 rounded-xl bg-[#16181f] p-1 ring-1 ring-white/[0.08]">
-            {[...SERVERS, ...(anime ? [{ id: 'anime', label: 'ANIME' }] : [])].map((srv) => (
+            {[...SERVERS, ...(anime ? [{ id: 'anime', label: 'ANIME' }, { id: 'shonen', label: 'Shonen' }, { id: 'tryembed', label: 'TryEmbed' }] : [])].map((srv) => (
               <button
                 key={srv.id}
                 type="button"
@@ -335,10 +344,11 @@ export default function Watch({ type: propType = 'movie' }) {
             ))}
           </div>
 
-          {serverId === 'anime' && (
+          {['anime', 'shonen', 'tryembed'].includes(serverId) && (
             <div className="flex flex-wrap items-center gap-2 text-xs text-[#8f98b2]">
               <label>Audio <select aria-label="Anime language" value={animeLanguage} onChange={(e) => { setAnimeLanguage(e.target.value); setFrameLoading(true); }} className="rounded-lg bg-[#16181f] p-2 text-white"><option value="sub">Sub</option><option value="dub">Dub</option></select></label>
               <label>MAL ID <input disabled={mappingStatus === 'loading'} aria-label="MyAnimeList ID" type="number" min="1" value={malId} onChange={(e) => { setMalId(e.target.value); setFrameLoading(true); }} className="w-24 rounded-lg bg-[#16181f] p-2 text-white" /></label>
+              {serverId === 'shonen' && <span>AniList ID: {anilistId || 'resolving…'}</span>}
               <label>Anime episode <input disabled={mappingStatus === 'loading'} aria-label="Anime episode" type="number" min="1" value={animeEpisode} onChange={(e) => { setAnimeEpisode(Math.max(1, Number(e.target.value))); setFrameLoading(true); }} className="w-16 rounded-lg bg-[#16181f] p-2 text-white" /></label>
               <span>MAL ID is filled automatically when available. Sub/dub availability varies.</span>
             </div>
