@@ -93,6 +93,13 @@ export function buildMegaPlayAnimeUrl(malId, episode = 1, language = 'sub') {
   if (!validAnimeId(malId)) return '';
   return `https://megaplay.buzz/stream/mal/${malId}/${episode}/${language === 'dub' ? 'dub' : 'sub'}`;
 }
+// Watch.jsx sandboxing blocks TryEmbed popups/top-level redirects; it cannot remove ads rendered inside the embedded page.
+export function buildTryEmbedAnimeUrl(malId, episode = 1, language = 'sub') {
+  if (!validAnimeId(malId)) return '';
+  const track = language === 'dub' ? 'dub' : 'sub';
+  const params = new URLSearchParams({ autoplay: 'true', autoSkip: 'true', autoNext: 'false', skin: 'silicon' });
+  return `https://tryembed.us.cc/embed/anime/mal/${malId}/${episode}/${track}?${params}`;
+}
 
 export function buildStreamUrl(serverId, type, id, opts = {}) {
   const srv = SERVERS.find((s) => s.id === Number(serverId)) || SERVERS[0];

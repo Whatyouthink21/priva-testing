@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { SERVERS, buildStreamUrl, buildZokoAnimeUrl, buildMegaPlayAnimeUrl, parsePlayerMessage } from '../src/lib/sources.js';
+import { SERVERS, buildStreamUrl, buildZokoAnimeUrl, buildMegaPlayAnimeUrl, buildTryEmbedAnimeUrl, parsePlayerMessage } from '../src/lib/sources.js';
 import { resolveAnimeMapping } from '../src/lib/anime.js';
 const rows = JSON.parse(readFileSync(new URL('../public/data/anime-mappings.json', import.meta.url)));
 
@@ -38,6 +38,9 @@ test('episode offsets, ambiguity, and language URLs', () => {
   assert.equal(buildMegaPlayAnimeUrl(199, 1, 'dub'), 'https://megaplay.buzz/stream/mal/199/1/dub');
   assert.equal(buildMegaPlayAnimeUrl(199, 1, 'hsub'), 'https://megaplay.buzz/stream/mal/199/1/sub');
   assert.equal(buildMegaPlayAnimeUrl(''), '');
+  assert.equal(buildTryEmbedAnimeUrl(21, 7, 'dub'), 'https://tryembed.us.cc/embed/anime/mal/21/7/dub?autoplay=true&autoSkip=true&autoNext=false&skin=silicon');
+  assert.equal(buildTryEmbedAnimeUrl(21, 7, 'hsub'), 'https://tryembed.us.cc/embed/anime/mal/21/7/sub?autoplay=true&autoSkip=true&autoNext=false&skin=silicon');
+  assert.equal(buildTryEmbedAnimeUrl('', 1), '');
 });
 
 test('continuous anime seasons use absolute episodes and exclude specials', async () => {
