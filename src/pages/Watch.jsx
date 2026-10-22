@@ -24,6 +24,7 @@ import {
   titleOf,
   yearOf,
 } from '../lib/tmdb';
+import { lookupAnimeMapping } from '../lib/anime';
 import { buildAnimeUrl, buildStreamUrl, parsePlayerMessage, SERVERS } from '../lib/sources';
 import { useLibrary } from '../context/LibraryContext';
 import { useToast } from '../context/ToastContext';
@@ -51,9 +52,11 @@ export default function Watch({ type: propType = 'movie' }) {
   const season = Number(params.season || searchParams.get('season') || 1);
   const episode = Number(params.episode || searchParams.get('episode') || 1);
 
-  const [serverId, setServerId] = useState(() => Number(settings.defaultServer) || 1);
+  const [serverId, setServerId] = useState(1);
   const [animeLanguage, setAnimeLanguage] = useState('sub');
   const [malId, setMalId] = useState('');
+  const [mappingStatus, setMappingStatus] = useState('loading');
+  const serverChoiceRef = useRef(null);
   const [animeEpisode, setAnimeEpisode] = useState(episode);
   const [detail, setDetail] = useState(null);
   const [episodes, setEpisodes] = useState([]);
@@ -208,17 +211,32 @@ export default function Watch({ type: propType = 'movie' }) {
     return () => window.removeEventListener('message', onMessage);
   }, [numericId, type, season, episode, episodes, settings.autoplayNext, navigate, saveWatchProgress]);
 
-  const anime = detail && isAnimeItem(detail);
+  const anime = Boolean(detail && isAnimeItem(detail));
+  const titleKey = `${type}-${numericId}`;
+  useEffect(() => {
+    if (!detail || Number(detail.id) !== numericId) return;
+    if (serverChoiceRef.current !== titleKey) {
+      setServerId(anime ? 'anime' : 1);
+    }
+  }, [anime, detail, numericId, titleKey]);
+
   useEffect(() => {
     setMalId('');
-    setAnimeEpisode(episode);
-    if (!anime || (type === 'tv' && season !== 1)) return;
-    const controller = new AbortController();
-    fetch(`https://api.ani.zip/mappings?tmdb_id=${numericId}`, { signal: controller.signal })
-      .then((r) => { if (!r.ok) throw new Error('Mapping unavailable'); return r.json(); })
-      .then((data) => { if (data.mappings?.mal_id) setMalId(String(data.mappings.mal_id)); })
-      .catch(() => {});
-    return () => controller.abort();
+    setAnimeEpisode(type === 'movie' ? 1 : episode);
+    if (!anime) return;
+    let cancelled = false;
+    setMappingStatus('loading');
+    lookupAnimeMapping(type, numericId, type === 'movie' ? 1 : season, type === 'movie' ? 1 : episode)
+      .then((mapping) => {
+        if (cancelled) return;
+        if (mapping) {
+          setMalId(mapping.malId);
+          setAnimeEpisode(mapping.episode);
+          setMappingStatus('ready');
+        } else setMappingStatus('missing');
+      })
+      .catch(() => { if (!cancelled) setMappingStatus('error'); });
+    return () => { cancelled = true; };
   }, [anime, numericId, type, season, episode]);
 
   const streamSrc = useMemo(
@@ -231,6 +249,8 @@ export default function Watch({ type: propType = 'movie' }) {
       }),
     [serverId, type, numericId, season, episode, settings.autoplayNext, malId, animeEpisode, animeLanguage]
   );
+
+  useEffect(() => { setFrameLoading(true); }, [streamSrc]);
 
   const title = detail ? titleOf(detail) : 'Loading...';
   const year = detail ? yearOf(detail) : '';
@@ -298,6 +318,7 @@ export default function Watch({ type: propType = 'movie' }) {
                 key={srv.id}
                 type="button"
                 onClick={() => {
+                  serverChoiceRef.current = titleKey;
                   setServerId(srv.id);
                   setFrameLoading(true);
                 }}
@@ -316,9 +337,9 @@ export default function Watch({ type: propType = 'movie' }) {
           {serverId === 'anime' && (
             <div className="flex flex-wrap items-center gap-2 text-xs text-[#8f98b2]">
               <label>Audio <select aria-label="Anime language" value={animeLanguage} onChange={(e) => { setAnimeLanguage(e.target.value); setFrameLoading(true); }} className="rounded-lg bg-[#16181f] p-2 text-white"><option value="sub">Sub</option><option value="dub">Dub</option></select></label>
-              <label>MAL ID <input aria-label="MyAnimeList ID" type="number" min="1" value={malId} onChange={(e) => { setMalId(e.target.value); setFrameLoading(true); }} className="w-24 rounded-lg bg-[#16181f] p-2 text-white" /></label>
-              <label>Anime episode <input aria-label="Anime episode" type="number" min="1" value={animeEpisode} onChange={(e) => { setAnimeEpisode(Math.max(1, Number(e.target.value))); setFrameLoading(true); }} className="w-16 rounded-lg bg-[#16181f] p-2 text-white" /></label>
-              <span>Check the MAL ID for this season. Sub/dub availability varies.</span>
+              <label>MAL ID <input disabled={mappingStatus === 'loading'} aria-label="MyAnimeList ID" type="number" min="1" value={malId} onChange={(e) => { setMalId(e.target.value); setFrameLoading(true); }} className="w-24 rounded-lg bg-[#16181f] p-2 text-white" /></label>
+              <label>Anime episode <input disabled={mappingStatus === 'loading'} aria-label="Anime episode" type="number" min="1" value={animeEpisode} onChange={(e) => { setAnimeEpisode(Math.max(1, Number(e.target.value))); setFrameLoading(true); }} className="w-16 rounded-lg bg-[#16181f] p-2 text-white" /></label>
+              <span>MAL ID is filled automatically when available. Sub/dub availability varies.</span>
             </div>
           )}
           <button
@@ -360,7 +381,12 @@ export default function Watch({ type: propType = 'movie' }) {
           </div>
         )}
 
-        {!streamSrc && <div className="grid h-full place-items-center p-6 text-center text-[#8f98b2]">Enter the MyAnimeList ID for this anime season above to load ANIME. You can also use any numbered server.</div>}
+        {!streamSrc && <div role="status" className="flex h-full flex-col items-center justify-center gap-4 p-6 text-center text-[#8f98b2]">
+          {mappingStatus === 'loading' ? <><Loader2 className="animate-spin text-blue-400" /><p>Finding the anime player for this episode…</p></> : <>
+            <p>{mappingStatus === 'error' ? 'Anime lookup is temporarily unavailable.' : 'No automatic anime mapping is available for this episode yet.'} Choose Server 1 to watch, or optionally enter a season-specific MAL ID above.</p>
+            <button type="button" onClick={() => { serverChoiceRef.current = titleKey; setServerId(1); setFrameLoading(true); }} className="btn-priva-blue rounded-xl px-5 py-3 font-semibold text-white">Watch on Server 1</button>
+          </>}
+        </div>}
         {streamSrc && <iframe
           ref={playerRef}
           key={streamSrc}

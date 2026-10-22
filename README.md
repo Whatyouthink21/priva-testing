@@ -26,10 +26,12 @@ npm run dev
 npm run build
 ```
 
-### v2.1 maintenance
+### v2.2 maintenance
 
 - Edit release notes in `src/pages/Announcements.jsx`, under `EDIT ANNOUNCEMENTS HERE`.
-- Server order and URL builders live in `src/lib/sources.js`. Server 1 is the former Server 3 (Bingr); Servers 3/4 retain the former Servers 1/2.
-- MegaPlay uses MAL IDs, not TMDB IDs. The player attempts an ani.zip lookup for films/first seasons. Later seasons or missing mappings require the season-specific MAL ID and anime episode in the player controls. Language availability depends on MegaPlay.
-- Nxsha uses its title page and Frost its watch page. Verify iframe permissions and episode selection on the deployed site; these sources did not supply a verified embed API during this update.
+- Server URL builders live in `src/lib/sources.js`: 1 = Bingr, 2 = Vidstuck, 3 = TGVID, 4 = frameXTV. Nxsha and Frost were removed. ANIME is selected automatically for anime; other titles start on Server 1.
+- MegaPlay uses MAL IDs, not TMDB IDs. The unsupported ani.zip TMDB query has been replaced by a compact local mapping at `public/data/anime-mappings.json`. This includes film/TV distinctions, TMDB seasons, and episode offsets. Ambiguous or missing mappings expose a numbered-server fallback and optional manual MAL/episode controls; provider coverage is not guaranteed.
+- Mapping source: [Fribb/anime-lists](https://github.com/Fribb/anime-lists), derived from its upstream anime ID mapping projects. Refresh with `python3 scripts/update-anime-mappings.py` (requires authenticated `gh`). Only numeric mapping fields are retained, not the full source dataset. Run `npm test` after refreshing.
+- frameXTV uses the documented `/embed/{tmdbId}` and `/embed/{tmdbId}/{season}/{episode}` routes, with resume timestamps. 4K/language availability and third-party ad behavior depend on the source/title; badges are not guarantees.
 - The ad notice stores its last-display time locally in the browser and checks every 30 seconds while the tab is visible. Clearing site storage resets the reminder.
+- Validate actual third-party playback on the deployed site; build/unit tests do not verify external stream availability.

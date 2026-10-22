@@ -66,17 +66,20 @@ const LEGACY_SERVERS = [
   },
 ];
 
-// Server order for v2.1. The former Server 3 is now the default Server 1.
+// v2.2: remove Nxsha/Frost, renumber the retained sources, and add frameXTV.
 export const SERVERS = [
-  { ...LEGACY_SERVERS[2], id: 1, label: 'Server 1', tags: ['Fast', 'High quality'] },
-  { id: 2, label: 'Server 2',
-    buildMovieUrl: (id) => `https://nxsha.space/movie/${id}`,
-    buildTvUrl: (id, season = 1, episode = 1) => `https://nxsha.space/tv/${id}?season=${season}&episode=${episode}` },
-  { ...LEGACY_SERVERS[0], id: 3, label: 'Server 3' },
-  { ...LEGACY_SERVERS[1], id: 4, label: 'Server 4' },
-  { id: 5, label: 'Server 5',
-    buildMovieUrl: (id) => `https://tgfrost.lovable.app/watch/movie/${id}`,
-    buildTvUrl: (id, season = 1, episode = 1) => `https://tgfrost.lovable.app/watch/tv/${id}/${season}/${episode}` },
+  { ...LEGACY_SERVERS[2], id: 1, label: 'Server 1', tags: ['Fast', 'High quality', 'Ad free'] },
+  { ...LEGACY_SERVERS[0], id: 2, label: 'Server 2' },
+  { ...LEGACY_SERVERS[1], id: 3, label: 'Server 3' },
+  { id: 4, label: 'Server 4', tags: ['4K', 'Ad free'],
+    buildMovieUrl: (id, { startAt } = {}) => withQuery(`https://framextv.xyz/embed/${id}`, {
+      autoplay: 1, muted: 0, t: startAt > 0 ? Math.floor(startAt) : undefined,
+    }),
+    buildTvUrl: (id, season = 1, episode = 1, { startAt } = {}) =>
+      withQuery(`https://framextv.xyz/embed/${id}/${season}/${episode}`, {
+        autoplay: 1, muted: 0, t: startAt > 0 ? Math.floor(startAt) : undefined,
+      }),
+  },
 ];
 
 // MegaPlay uses MAL IDs, NOT the TMDB IDs used by the numbered servers.
@@ -130,8 +133,8 @@ export function buildDownloadUrl(sourceId, type, id, { season = 1, episode = 1 }
 
 /**
  * Parse live watch progress events from supported streaming servers:
- * - Server 3 JSON postMessage: { id, type, progress, timestamp, duration, season, episode }
- * - Server 4 postMessage: { type: "TGFLIX_EVENT", event, currentTime, duration, paused }
+ * - Server 2 JSON postMessage: { id, type, progress, timestamp, duration, season, episode }
+ * - Server 3 postMessage: { type: "TGFLIX_EVENT", event, currentTime, duration, paused }
  * - Server 1 postMessage: { type: "PLAYER_EVENT", data: { event: "playerstatus", currentTime, duration, playing } }
  */
 export function parsePlayerMessage(raw) {
@@ -150,7 +153,7 @@ export function parsePlayerMessage(raw) {
       ? { ...payload, ...payload.data }
       : payload;
 
-  const eventName = String(inner.event || inner.type || '').toLowerCase();
+  const eventName = String(inner.event || inner.type || '').toLowerCase().replace(/^framextv:/, '');
   const ended = ['ended', 'complete', 'completed', 'videoended'].includes(eventName);
 
   const pickNum = (keys) => {

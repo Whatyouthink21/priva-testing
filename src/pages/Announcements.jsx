@@ -4,6 +4,17 @@ import { Megaphone, Sparkles } from 'lucide-react';
 // EDIT ANNOUNCEMENTS HERE: update this array or add a new entry at the top.
 const ANNOUNCEMENTS = [
   {
+    version: 'v2.2',
+    title: 'Priva release v2.2',
+    summary: 'Smoother anime playback. A refreshed server lineup.',
+    updates: [
+      'ANIME is now the default for anime titles, with automatic season-aware MAL mapping and Sub/Dub options. Unmapped titles can still use a numbered server.',
+      'Removed the previous Servers 2 and 5. The remaining sources are now numbered 1–3.',
+      'Added the new Server 4 with 4K and Ad free tags, plus playback resume support. Server 1 now also carries an Ad free tag.',
+      'Stream quality, language availability, and third-party ad behavior depend on the source and title.',
+    ],
+  },
+  {
     version: 'v2.1',
     title: 'Priva release v2.1',
     summary: 'Server addition. Anime expansion.',
