@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Compass } from 'lucide-react';
+import AniListSection from '../components/AniListSection';
 import HeroBanner from '../components/HeroBanner';
 import RankedRow from '../components/RankedRow';
 import ContentRow from '../components/ContentRow';
@@ -175,6 +176,7 @@ export default function CatalogPage({ kind = 'movie' }) {
       <HeroBanner slides={heroSlides} loading={heroLoading} />
 
       <div className="relative z-20 -mt-6 space-y-2">
+        {cfg.isAnime && <AniListSection />}
         <RankedRow
           title={cfg.rankedTitle}
           items={ranked}

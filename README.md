@@ -35,3 +35,10 @@ npm run build
 - frameXTV uses the documented `/embed/{tmdbId}` and `/embed/{tmdbId}/{season}/{episode}` routes, with resume timestamps. 4K/language availability and third-party ad behavior depend on the source/title; badges are not guarantees.
 - The ad notice stores its last-display time locally in the browser and checks every 30 seconds while the tab is visible. Clearing site storage resets the reminder.
 - Validate actual third-party playback on the deployed site; build/unit tests do not verify external stream availability.
+
+### v2.3 — AniList and later seasons
+
+- Anime catalog now includes public AniList trending/current-season discovery. Requests go directly to `https://graphql.anilist.co`; no OAuth token, client ID, or client secret is needed for these public queries. This release does not add AniList login or private-list synchronization. **Never put OAuth client secrets into Vite environment variables or browser code.**
+- AniList failures/rate limits display a retry state without blocking TMDB shelves. Metadata is cached in memory for five minutes. Catalog cards use a unique MAL→TMDB season mapping where available; otherwise they link to AniList rather than guessing a watch URL.
+- Continuous series with a single MAL entry now accumulate prior regular-season episode counts (e.g. One Piece season 2 does not restart at MAL episode 1). Specials are excluded. Split-series use local season/cour mapping plus a bounded AniList sequel lookup and original episode air dates to accommodate differing season layouts. No match is guaranteed for every title/provider.
+- Existing explicit season mappings remain the fallback if AniList is unavailable. Test actual later-season Sub/Dub playback on the deployed site; source coverage cannot be verified by unit tests.

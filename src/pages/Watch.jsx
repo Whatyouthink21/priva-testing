@@ -24,7 +24,7 @@ import {
   titleOf,
   yearOf,
 } from '../lib/tmdb';
-import { lookupAnimeMapping } from '../lib/anime';
+import { resolveAnimePlayback } from '../lib/animePlayback';
 import { buildAnimeUrl, buildStreamUrl, parsePlayerMessage, SERVERS } from '../lib/sources';
 import { useLibrary } from '../context/LibraryContext';
 import { useToast } from '../context/ToastContext';
@@ -168,7 +168,7 @@ export default function Watch({ type: propType = 'movie' }) {
     });
   }, [detail, currentEpisode, type, numericId, season, episode]);
 
-  // Listen to real-time playback events from all 3 streaming servers via postMessage
+  // Accept playback telemetry only from the active iframe.
   useEffect(() => {
     const onMessage = (event) => {
       const frame = playerRef.current;
@@ -189,8 +189,9 @@ export default function Watch({ type: propType = 'movie' }) {
         backdrop: d.backdrop_path,
         episodeStill: epMeta?.still_path || null,
         episodeName: epMeta?.name || '',
-        season: parsed.season || season,
-        episode: parsed.episode || episode,
+        // Anime providers use MAL-local numbering; keep library progress in TMDB coordinates.
+        season: serverId === 'anime' ? season : parsed.season || season,
+        episode: serverId === 'anime' ? episode : parsed.episode || episode,
         timestamp: parsed.timestamp,
         duration: parsed.duration,
         progress: parsed.progress,
@@ -209,7 +210,7 @@ export default function Watch({ type: propType = 'movie' }) {
 
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
-  }, [numericId, type, season, episode, episodes, settings.autoplayNext, navigate, saveWatchProgress]);
+  }, [numericId, type, season, episode, episodes, settings.autoplayNext, navigate, saveWatchProgress, serverId]);
 
   const anime = Boolean(detail && isAnimeItem(detail));
   const titleKey = `${type}-${numericId}`;
@@ -223,10 +224,10 @@ export default function Watch({ type: propType = 'movie' }) {
   useEffect(() => {
     setMalId('');
     setAnimeEpisode(type === 'movie' ? 1 : episode);
-    if (!anime) return;
+    if (!anime || Number(detail?.id) !== numericId) return;
     let cancelled = false;
     setMappingStatus('loading');
-    lookupAnimeMapping(type, numericId, type === 'movie' ? 1 : season, type === 'movie' ? 1 : episode)
+    resolveAnimePlayback(type, numericId, type === 'movie' ? 1 : season, type === 'movie' ? 1 : episode, detail, api.season)
       .then((mapping) => {
         if (cancelled) return;
         if (mapping) {
@@ -237,7 +238,7 @@ export default function Watch({ type: propType = 'movie' }) {
       })
       .catch(() => { if (!cancelled) setMappingStatus('error'); });
     return () => { cancelled = true; };
-  }, [anime, numericId, type, season, episode]);
+  }, [anime, numericId, type, season, episode, detail]);
 
   const streamSrc = useMemo(
     () =>
